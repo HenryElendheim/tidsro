@@ -61,4 +61,34 @@
   <!-- Card drop shadow (shadow-sm) -->
   <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="8"
                     Direction="270" Opacity="0.18" Color="#000000"/>
+
+  <!-- Button styles -->
+  <Style x:Key="QuietAction" TargetType="Button">
+    <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
+    <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="10,6"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="Button">
+          <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="8"
+                  BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                  Padding="{TemplateBinding Padding}">
+            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="b" Property="Background" Value="{StaticResource ElevatedBg}"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
 </ResourceDictionary>
