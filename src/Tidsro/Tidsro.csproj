@@ -21,4 +21,8 @@
     <Resource Include="Assets\icons\tidsro.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Include="Assets\sounds\*.wav" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>
