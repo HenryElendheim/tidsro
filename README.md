@@ -12,10 +12,33 @@ Early design. The full design lives in [`docs/superpowers/specs/2026-06-03-tidsr
 
 C# · WPF (.NET) · MVVM. Local-first: no accounts, no network — your data stays on your machine.
 
+## Slice 1 — Countdowns
+
+Countdown timers are implemented and working.
+
+**Run:**
+
+```
+dotnet run --project src/Tidsro
+```
+
+Or build and launch the resulting `Tidsro.exe` directly. The app starts in the system tray — no window opens on launch.
+
+**Basic use:**
+
+- Left-click the tray icon to open the main window.
+- Pick a preset (15 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Invalid input shows a calm inline message.
+- Multiple countdowns can run at once; each shows a live mm:ss (or h:mm:ss) countdown with pause/resume and cancel.
+- When a timer finishes, a calm card appears in the bottom-right corner. It does not steal focus.
+  - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
+  - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
+  - Multiple finished cards stack upward and dismiss independently.
+- Open **Settings** from the tray menu to toggle launch-at-startup and choose a default sound.
+
+> Note: tray icon and sound files are placeholder assets in this slice.
+
 ## Planned (v1)
 
-- Countdown timers with presets (15 / 30 / 60 min) and custom durations
 - Clock-time alarms and recurring (weekday) alarms
-- An optional label per timer; silent by default, or a gentle built-in sound
-- A quiet bottom-right completion card that never steals focus
-- Lives in the system tray, low footprint
+- An optional label per timer
+- Cloud sync / backup (future slice)
