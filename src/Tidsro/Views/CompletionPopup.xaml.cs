@@ -46,7 +46,16 @@ public partial class CompletionPopup : Window
         MouseLeave += (_, _) => { if (!IsKeyboardFocusWithin) Actions.Opacity = 0; };
         IsKeyboardFocusWithinChanged += (_, e) => { if ((bool)e.NewValue) Actions.Opacity = 1; else if (!IsMouseOver) Actions.Opacity = 0; };
 
-        Loaded += (_, _) => UiaNotifier.Announce(this, $"{_vm.Title} complete");
+        Loaded += (_, _) =>
+        {
+            UiaNotifier.Announce(this, $"{_vm.Title} complete");
+            if (!SystemParameters.ClientAreaAnimation)   // reduced motion -> no fade
+            { Opacity = 1; return; }
+            Opacity = 0;
+            var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
+                (Duration)FindResource("DurationBase")) { EasingFunction = new System.Windows.Media.Animation.CubicEase() };
+            BeginAnimation(OpacityProperty, fade);
+        };
         Closed += (_, _) => NativeFocus.Restore(_previousForeground);
     }
 
