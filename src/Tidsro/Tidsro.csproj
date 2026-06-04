@@ -16,4 +16,9 @@
     <PackageReference Include="H.NotifyIcon.Wpf" Version="2.4.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- placeholder icon, replace with final art -->
+    <Resource Include="Assets\icons\tidsro.ico" />
+  </ItemGroup>
+
 </Project>
