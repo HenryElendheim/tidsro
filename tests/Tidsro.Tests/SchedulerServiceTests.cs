@@ -78,4 +78,28 @@ public class SchedulerServiceTests
         s.Cancel(item);
         Assert.Empty(s.Running);
     }
+
+    [Fact]
+    public void Reset_rearms_the_same_item_to_its_original_duration()
+    {
+        var (s, c) = New();
+        var item = s.StartCountdown(TimeSpan.FromMinutes(25), "focus", SoundChoice.None);
+        c.Advance(TimeSpan.FromMinutes(10));                 // 15 left
+        s.Reset(item);
+        Assert.Same(item, Assert.Single(s.Running));         // same item re-armed, not a new one
+        Assert.Equal(TimerState.Running, item.State);
+        Assert.Equal(TimeSpan.FromMinutes(25), s.Remaining(item));
+        Assert.Equal(TimeSpan.FromMinutes(25), item.OriginalDuration);
+    }
+
+    [Fact]
+    public void Reset_on_a_paused_item_stays_paused_at_full_duration()
+    {
+        var (s, c) = New();
+        var item = s.StartCountdown(TimeSpan.FromMinutes(25), null, SoundChoice.None);
+        c.Advance(TimeSpan.FromMinutes(10)); s.Pause(item);
+        s.Reset(item);
+        Assert.Equal(TimerState.Paused, item.State);         // stays stopped at the start
+        Assert.Equal(TimeSpan.FromMinutes(25), s.Remaining(item));
+    }
 }

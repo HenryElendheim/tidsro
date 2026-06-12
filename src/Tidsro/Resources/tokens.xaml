@@ -66,8 +66,20 @@
   <DropShadowEffect x:Key="CardShadow" BlurRadius="24" ShadowDepth="8"
                     Direction="270" Opacity="0.18" Color="#000000"/>
 
+  <!-- Keyboard-only focus ring: a FocusVisualStyle renders for keyboard navigation, never for mouse clicks. -->
+  <Style x:Key="ActionFocusVisual">
+    <Setter Property="Control.Template">
+      <Setter.Value>
+        <ControlTemplate>
+          <Border CornerRadius="8" BorderThickness="1.5" BorderBrush="{StaticResource AccentStrong}" Margin="-1.5"/>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Button styles -->
   <Style x:Key="QuietAction" TargetType="Button">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
     <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
     <Setter Property="Foreground" Value="{StaticResource Text}"/>
     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
@@ -86,9 +98,6 @@
           <ControlTemplate.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
               <Setter TargetName="b" Property="Background" Value="{StaticResource ElevatedBg}"/>
-            </Trigger>
-            <Trigger Property="IsKeyboardFocused" Value="True">
-              <Setter TargetName="b" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
             </Trigger>
           </ControlTemplate.Triggers>
         </ControlTemplate>
