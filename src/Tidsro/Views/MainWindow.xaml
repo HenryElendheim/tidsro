@@ -48,12 +48,27 @@
                     Padding="12" Margin="0,0,0,8">
               <DockPanel>
                 <Button DockPanel.Dock="Right" Content="✕" Command="{Binding CancelCommand}"
-                        AutomationProperties.Name="Cancel timer" Style="{StaticResource QuietAction}"/>
-                <Button DockPanel.Dock="Right" Content="⏸" Command="{Binding PauseResumeCommand}"
-                        AutomationProperties.Name="Pause or resume" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                        AutomationProperties.Name="Cancel timer" ToolTip="Cancel timer" Style="{StaticResource QuietAction}"/>
+                <Button DockPanel.Dock="Right" Content="↺" Command="{Binding ResetCommand}"
+                        AutomationProperties.Name="Reset timer" ToolTip="Reset to full time" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                <Button DockPanel.Dock="Right" Content="{Binding PauseResumeGlyph}" Command="{Binding PauseResumeCommand}"
+                        FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                        AutomationProperties.Name="{Binding PauseResumeLabel}" ToolTip="{Binding PauseResumeLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
                 <StackPanel>
                   <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
-                  <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}"/>
+                  <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
+                    <TextBlock.Style>
+                      <Style TargetType="TextBlock">
+                        <Setter Property="Foreground" Value="{StaticResource Text}"/>
+                        <Style.Triggers>
+                          <!-- Paused: dim the readout. Reinforces the ▶ glyph + "Resume" name; never the sole signal. -->
+                          <DataTrigger Binding="{Binding IsPaused}" Value="True">
+                            <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                          </DataTrigger>
+                        </Style.Triggers>
+                      </Style>
+                    </TextBlock.Style>
+                  </TextBlock>
                   <TextBlock Text="{Binding SoundTag}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}"/>
                 </StackPanel>
               </DockPanel>

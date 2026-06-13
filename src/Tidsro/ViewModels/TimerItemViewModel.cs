@@ -7,11 +7,17 @@ namespace Tidsro.ViewModels;
 
 public partial class TimerItemViewModel : ObservableObject
 {
+    // Segoe Fluent Icons code points, rendered via the pause button's FontFamily in the View.
+    private static readonly string PauseGlyph = ((char)0xE769).ToString();
+    private static readonly string PlayGlyph = ((char)0xE768).ToString();
+
     private readonly SchedulerService _scheduler;
     public TimerItem Item { get; }
 
     [ObservableProperty] private string _remainingText = "00:00";
     [ObservableProperty] private bool _isPaused;
+    [ObservableProperty] private string _pauseResumeGlyph = PauseGlyph;
+    [ObservableProperty] private string _pauseResumeLabel = "Pause";
 
     public TimerItemViewModel(TimerItem item, SchedulerService scheduler)
     {
@@ -28,6 +34,8 @@ public partial class TimerItemViewModel : ObservableObject
         var r = _scheduler.Remaining(Item);
         RemainingText = r.Hours > 0 ? r.ToString(@"h\:mm\:ss") : r.ToString(@"mm\:ss");
         IsPaused = Item.State == TimerState.Paused;
+        PauseResumeGlyph = IsPaused ? PlayGlyph : PauseGlyph;
+        PauseResumeLabel = IsPaused ? "Resume" : "Pause";
     }
 
     [RelayCommand] private void PauseResume()
@@ -38,4 +46,6 @@ public partial class TimerItemViewModel : ObservableObject
     }
 
     [RelayCommand] private void Cancel() => _scheduler.Cancel(Item);
+
+    [RelayCommand] private void Reset() { _scheduler.Reset(Item); Refresh(); }
 }

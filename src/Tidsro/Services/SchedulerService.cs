@@ -77,4 +77,18 @@ public sealed class SchedulerService
         Cancel(item);
         return StartCountdown(item.OriginalDuration, item.Label, item.Sound);
     }
+
+    public void Reset(TimerItem item)
+    {
+        item.Duration = item.OriginalDuration;
+        if (item.State == TimerState.Paused)
+        {
+            item.PausedRemaining = item.OriginalDuration;   // back to the start, still paused
+        }
+        else
+        {
+            item.EndsAt = _clock.Now + item.OriginalDuration;
+            item.State = TimerState.Running;
+        }
+    }
 }
