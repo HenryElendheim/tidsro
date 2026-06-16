@@ -1,12 +1,12 @@
 # Tidsro
 
-A calm, dark-mode-first desktop timer and alarm for Windows — countdown timers, clock-time alarms, and recurring alarms that nudge you with a quiet corner card instead of a flashy notification.
+A calm, dark-mode-first desktop timer for Windows — countdown timers that nudge you with a quiet corner card instead of a flashy notification. Clock-time and recurring alarms are on the roadmap.
 
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 ## Status
 
-In development, built in slices. **Slice 1 (countdowns) is implemented and merged**, with polish on top: Settings apply on **Save**, the running-timer row has clearer **pause/resume** plus a **Reset**, and each timer can use its own **sound**, chosen with a preview at setup. The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md).
+**v1.0.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). This first version does countdown timers, with Settings that apply on **Save**, a running-timer row with clear **pause/resume** and **Reset**, and a per-timer **sound** chosen with a preview at setup. Clock-time and recurring alarms are next (see [Roadmap](#roadmap)). The full design lives in [`docs/superpowers/specs/2026-06-03-tidsro-design.md`](docs/superpowers/specs/2026-06-03-tidsro-design.md).
 
 ## Install
 
@@ -22,25 +22,10 @@ Uninstall any time from **Settings → Apps → Installed apps → Tidsro**.
 
 Both builds are self-contained: they run on any 64-bit Windows PC with no .NET required. Your timers and settings stay on your machine in `%AppData%\Tidsro`.
 
-## Stack
+## Using Tidsro
 
-C# · WPF (.NET) · MVVM. Local-first: no accounts, no network — your data stays on your machine.
+Launching Tidsro opens its window — it remembers where you last placed it. Closing the window tucks Tidsro back into the system tray, where it keeps running until you choose **Quit** from the tray menu; left-click the tray icon any time to reopen it. When Tidsro is started automatically with Windows, it stays quietly in the tray.
 
-## Slice 1 — Countdowns
-
-Countdown timers are implemented and working.
-
-**Run:**
-
-```
-dotnet run --project src/Tidsro
-```
-
-Or build and launch the resulting `Tidsro.exe` directly. The app starts in the system tray — no window opens on launch.
-
-**Basic use:**
-
-- Left-click the tray icon to open the main window.
 - Pick a preset (15 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Invalid input shows a calm inline message.
 - Choose a **sound** for the next timer from the dropdown — **▶** previews it. It starts from your default sound and applies to both presets and custom timers.
 - Multiple countdowns can run at once; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Paused timers dim; resetting while paused keeps the timer stopped at the start.
@@ -50,17 +35,25 @@ Or build and launch the resulting `Tidsro.exe` directly. The app starts in the s
   - Multiple finished cards stack upward and dismiss independently.
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
 
-> Note: tray icon and sound files are placeholder assets in this slice.
-
-## Planned (v1)
+## Roadmap
 
 - Clock-time alarms and recurring (weekday) alarms
 - An optional label per timer
-- Cloud sync / backup (future slice)
+- Cloud sync / backup
 
-## Building a release (developers)
+## Stack
 
-`publish.ps1` builds both downloads into `dist/`:
+C# · WPF (.NET) · MVVM. Local-first: no accounts, no network — your data stays on your machine.
+
+## Building from source
+
+Run it directly:
+
+```
+dotnet run --project src/Tidsro
+```
+
+Build the distributable downloads into `dist/` with `publish.ps1`:
 
 ```
 ./publish.ps1
