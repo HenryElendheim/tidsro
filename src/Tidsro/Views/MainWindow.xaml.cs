@@ -60,11 +60,14 @@ public partial class MainWindow : Window
     }
 
     private const double WideBreakpoint = 760;
+    private bool? _wideApplied;   // current layout mode; skip the rebuild unless the breakpoint flips
 
     // Narrow: sections stack with a horizontal divider. Wide: side by side with a vertical divider.
     private void ApplyLayout()
     {
         var wide = ActualWidth >= WideBreakpoint;
+        if (_wideApplied == wide) return;   // same mode as last time — nothing to rebuild
+        _wideApplied = wide;
         Sections.ColumnDefinitions.Clear();
         Sections.RowDefinitions.Clear();
         if (wide)
