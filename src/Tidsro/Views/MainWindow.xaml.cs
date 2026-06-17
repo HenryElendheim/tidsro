@@ -40,6 +40,8 @@ public partial class MainWindow : Window
     // First show: restore the last on-screen position, or centre on first run.
     private void ApplyPlacement()
     {
+        if (_settings.WindowWidth is double w) Width = w;
+        if (_settings.WindowHeight is double h) Height = h;
         if (_settings.WindowLeft is double left && _settings.WindowTop is double top && IsOnScreen(left, top))
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -73,6 +75,8 @@ public partial class MainWindow : Window
     private void SavePlacement()
     {
         if (WindowState != WindowState.Normal) return;   // store a usable position, not minimised/maximised
+        _settings.WindowWidth = Width;
+        _settings.WindowHeight = Height;
         _settings.WindowLeft = Left;
         _settings.WindowTop = Top;
         try { _persist(); } catch { /* position is a nicety; never block hiding */ }
