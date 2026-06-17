@@ -215,55 +215,95 @@ public class MainViewModelTests
     }
 
     [Fact]
-    public void BeginEdit_loads_the_row_into_the_editor_and_enters_edit_mode()
+    public void BeginEdit_raises_EditAlarmRequested_with_the_row()
     {
         var vm = New(out _, out _);                         // 09:00
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AlarmSound = SoundChoice.Bell;
         vm.AddOrSaveAlarmCommand.Execute(null);
         var row = vm.Alarms[0];
+        AlarmItemViewModel? requested = null;
+        vm.EditAlarmRequested += (_, r) => requested = r;
 
         vm.BeginEditAlarmCommand.Execute(row);
 
-        Assert.True(vm.IsEditingAlarm);
-        Assert.Equal("Save", vm.AddOrSaveLabel);
-        Assert.Equal("10:00", vm.AlarmTimeInput);
-        Assert.Equal("Tea", vm.AlarmLabel);
-        Assert.Equal(SoundChoice.Bell, vm.AlarmSound);
+        Assert.Same(row, requested);                        // the View opens the dialog for this row
+        Assert.Single(vm.Alarms);                           // nothing changed yet — that happens on dialog Save
     }
 
     [Fact]
-    public void Save_in_edit_mode_updates_the_alarm_in_place_keeping_its_id()
-    {
-        var vm = New(out _, out _);
-        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea";
-        vm.AddOrSaveAlarmCommand.Execute(null);
-        var originalId = vm.Alarms[0].Item.Id;
-
-        vm.BeginEditAlarmCommand.Execute(vm.Alarms[0]);
-        vm.AlarmTimeInput = "11:15"; vm.AlarmLabel = "Coffee";
-        vm.AddOrSaveAlarmCommand.Execute(null);
-
-        var row = Assert.Single(vm.Alarms);                // still one alarm, not a duplicate
-        Assert.Equal(originalId, row.Item.Id);
-        Assert.Equal("11:15", row.TimeText);
-        Assert.Equal("Coffee", row.DisplayLabel);
-        Assert.False(vm.IsEditingAlarm);                   // back to add mode
-        Assert.Equal("Add", vm.AddOrSaveLabel);
-    }
-
-    [Fact]
-    public void Cancel_edit_leaves_the_alarm_unchanged_and_clears_the_editor()
+    public void BeginEdit_commits_an_outstanding_pending_delete_first()
     {
         var vm = New(out _, out _);
         vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "11:00"; vm.AddOrSaveAlarmCommand.Execute(null);
 
-        vm.BeginEditAlarmCommand.Execute(vm.Alarms[0]);
-        vm.AlarmTimeInput = "23:00";                        // start changing...
-        vm.CancelEditAlarmCommand.Execute(null);           // ...then bail
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);        // 10:00 now pending
+        Assert.True(vm.HasPendingDelete);
+        var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
 
-        Assert.Equal("10:00", Assert.Single(vm.Alarms).TimeText);   // unchanged
-        Assert.False(vm.IsEditingAlarm);
-        Assert.Equal("", vm.AlarmTimeInput);
+        vm.BeginEditAlarmCommand.Execute(vm.Alarms[0]);     // editing 11:00 settles the pending delete
+
+        Assert.False(vm.HasPendingDelete);
+        Assert.Equal(1, committed);
+    }
+
+    [Fact]
+    public void BeginEdit_with_null_row_does_nothing()
+    {
+        var vm = New(out _, out _);
+        var raised = false; vm.EditAlarmRequested += (_, _) => raised = true;
+
+        vm.BeginEditAlarmCommand.Execute(null);
+
+        Assert.False(raised);
+    }
+
+    [Fact]
+    public void ApplyAlarmEdit_updates_the_alarm_in_place_keeping_its_id()
+    {
+        var vm = New(SoundChoice.None, out _, out var sched, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AlarmSound = SoundChoice.Bell;
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        var originalId = vm.Alarms[0].Item.Id;
+        var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
+
+        vm.ApplyAlarmEdit(originalId, 11, 15, "coffee", SoundChoice.Marimba);
+
+        var row = Assert.Single(vm.Alarms);                // still one alarm, not a duplicate
+        Assert.Single(sched.Alarms);                       // scheduler holds exactly one armed alarm
+        Assert.Equal(originalId, row.Item.Id);             // same identity preserved
+        Assert.Equal("11:15", row.TimeText);               // new time
+        Assert.Equal("Coffee", row.DisplayLabel);          // label capitalized like the add path
+        Assert.Equal(SoundChoice.Marimba, row.Item.Sound); // new sound
+        Assert.Equal(11, row.Item.EndsAt!.Value.Hour);
+        Assert.Equal(15, row.Item.EndsAt!.Value.Minute);
+        Assert.Equal(1, changed);                          // persisted via the event
+    }
+
+    [Fact]
+    public void ApplyAlarmEdit_announces_the_update()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.ApplyAlarmEdit(id, 12, 45, null, SoundChoice.None);
+
+        Assert.NotNull(announced);
+        Assert.Contains("12:45", announced);
+    }
+
+    [Fact]
+    public void ApplyAlarmEdit_clears_a_whitespace_label_to_null()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddOrSaveAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.ApplyAlarmEdit(id, 11, 0, "   ", SoundChoice.None);
+
+        Assert.Null(vm.Alarms[0].Item.Label);
     }
 
     [Fact]

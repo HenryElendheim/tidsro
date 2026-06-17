@@ -16,12 +16,14 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _undoTimer;
 
     public MainWindow(MainViewModel vm, Func<SettingsWindow> settingsFactory,
+                      Func<AlarmItemViewModel, EditAlarmWindow> editAlarmFactory,
                       AppSettings settings, Action persist)
     {
         InitializeComponent();
         DataContext = vm;
 
         vm.Announcement += (_, message) => UiaNotifier.Announce(this, message);
+        vm.EditAlarmRequested += (_, row) => { var dlg = editAlarmFactory(row); dlg.Owner = this; dlg.ShowDialog(); };
 
         _undoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(9) };   // comfortable undo floor (spec §3.1)
         _undoTimer.Tick += (_, _) => { _undoTimer.Stop(); vm.CommitPendingDelete(); };

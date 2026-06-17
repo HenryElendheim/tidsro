@@ -122,10 +122,13 @@ public partial class App : Application
 
     private void ShowMainWindow()
     {
+        Func<AlarmItemViewModel, EditAlarmWindow> editFactory = row => new EditAlarmWindow(
+            new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
+                row.Item.Label ?? "", row.Item.Sound, _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
                     SaveData, _mainVm.SetDefaultSound)),
-            _settings, SaveData);
+            editFactory, _settings, SaveData);
         Application.Current.MainWindow = _main;
         _main.Show();
         _main.WindowState = WindowState.Normal;

@@ -28,9 +28,6 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _alarmLabel = "";
     [ObservableProperty] private string? _alarmError;
     [ObservableProperty] private SoundChoice _alarmSound;
-    [ObservableProperty] private bool _isEditingAlarm;
-
-    private Guid? _editingId;   // the alarm being edited in place; null in add mode
 
     [ObservableProperty] private string? _missedNote;
 
@@ -43,9 +40,8 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler? AlarmsChanged;
     /// <summary>Raised with a short message for the View to announce via UIA (no focus change).</summary>
     public event EventHandler<string>? Announcement;
-
-    public string AddOrSaveLabel => IsEditingAlarm ? "Save" : "Add";
-    partial void OnIsEditingAlarmChanged(bool value) => OnPropertyChanged(nameof(AddOrSaveLabel));
+    /// <summary>Raised when the user picks an agenda row to edit, so the View opens the modal Edit-alarm dialog.</summary>
+    public event EventHandler<AlarmItemViewModel>? EditAlarmRequested;
 
     public bool IsDayEmpty => Alarms.Count == 0;
 
@@ -134,6 +130,7 @@ public partial class MainViewModel : ObservableObject
         if (!live.SetEquals(shown)) RebuildAgenda();
     }
 
+    // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
     [RelayCommand]
     private void AddOrSaveAlarm()
     {
@@ -144,43 +141,34 @@ public partial class MainViewModel : ObservableObject
 
         var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
         var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-
-        if (_editingId is { } id)                                   // edit in place
-        {
-            var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
-            if (existing is not null) _scheduler.RemoveAlarm(existing);
-            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound, id);
-            ExitEditMode();
-            Announce($"Alarm updated for {fireAt:HH\\:mm}");
-        }
-        else
-        {
-            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
-            Announce($"Alarm added for {fireAt:HH\\:mm}");
-        }
+        _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
 
         RebuildAgenda();
         ClearEditor();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
+        Announce($"Alarm added for {fireAt:HH\\:mm}");
     }
 
     [RelayCommand]
     private void BeginEditAlarm(AlarmItemViewModel? row)
     {
-        if (row?.Item.EndsAt is not { } fireAt) return;
-        _editingId = row.Item.Id;
-        AlarmTimeInput = fireAt.ToString("HH\\:mm");
-        AlarmLabel = row.Item.Label ?? "";
-        AlarmSound = row.Item.Sound;
-        AlarmError = null;
-        IsEditingAlarm = true;
+        if (row is null) return;
+        CommitPendingDelete();                 // settle any outstanding undo first
+        EditAlarmRequested?.Invoke(this, row);
     }
 
-    [RelayCommand]
-    private void CancelEditAlarm()
+    // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
+    // label like the add path. Mirrors the former in-place edit branch.
+    public void ApplyAlarmEdit(Guid id, int hour, int minute, string? label, SoundChoice sound)
     {
-        ExitEditMode();
-        ClearEditor();
+        var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
+        if (existing is not null) _scheduler.RemoveAlarm(existing);
+        var clean = string.IsNullOrWhiteSpace(label) ? null : CapitalizeFirst(label.Trim());
+        var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+        _scheduler.ArmClockAlarm(fireAt, clean, sound, id);
+        RebuildAgenda();
+        Announce($"Alarm updated for {fireAt:HH\\:mm}");
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
@@ -241,12 +229,6 @@ public partial class MainViewModel : ObservableObject
         AlarmTimeInput = "";
         AlarmLabel = "";
         AlarmError = null;
-    }
-
-    private void ExitEditMode()
-    {
-        _editingId = null;
-        IsEditingAlarm = false;
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);

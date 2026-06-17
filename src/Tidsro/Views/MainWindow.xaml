@@ -155,12 +155,8 @@
                       FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" AutomationProperties.Name="Preview sound"
                       ToolTip="Preview sound" Style="{StaticResource QuietAction}" Margin="8,0,0,0"/>
             </Grid>
-            <DockPanel Margin="0,14,0,0" LastChildFill="False">
-              <Button DockPanel.Dock="Left" Content="Cancel" Command="{Binding CancelEditAlarmCommand}" Style="{StaticResource QuietAction}"
-                      Visibility="{Binding IsEditingAlarm, Converter={StaticResource BoolToVisible}}"/>
-              <Button DockPanel.Dock="Right" Content="{Binding AddOrSaveLabel}" Command="{Binding AddOrSaveAlarmCommand}"
-                      Style="{StaticResource GoldAction}" AutomationProperties.Name="{Binding AddOrSaveLabel}"/>
-            </DockPanel>
+            <Button Content="Add" Command="{Binding AddOrSaveAlarmCommand}" Style="{StaticResource GoldAction}"
+                    HorizontalAlignment="Right" Margin="0,14,0,0" AutomationProperties.Name="Add alarm"/>
             <TextBlock Text="{Binding AlarmError}" Foreground="{StaticResource Danger}" FontSize="{StaticResource TextXs}"
                        Margin="0,8,0,0" TextWrapping="Wrap" AutomationProperties.LiveSetting="Assertive"
                        Visibility="{Binding AlarmError, Converter={StaticResource NullToCollapsed}}"/>
