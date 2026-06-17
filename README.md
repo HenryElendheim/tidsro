@@ -6,9 +6,9 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 
 ## Status
 
-**v1.1.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, and a per-timer sound) and **clock-time alarms** — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound, edit them in place, and delete with an undo window. Firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
+**v1.2.0 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, and a per-timer sound) and **clock-time alarms** — a **"Your day" agenda** where you set one-shot fire-at-HH:MM alarms with an optional label and per-alarm sound, edit them in a dialog, and delete with an undo window. Firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**. v1.2 is a design + interaction polish release: a responsive layout, refreshed dark visuals with gentle motion, and snappier timers.
 
-The v1.1 design spec lives in [`docs/superpowers/specs/2026-06-16-tidsro-v1.1-clock-time-alarms-design.md`](docs/superpowers/specs/2026-06-16-tidsro-v1.1-clock-time-alarms-design.md).
+The latest design spec (the v1.2 polish pass) lives in [`docs/superpowers/specs/2026-06-17-tidsro-slice3-design-polish-design.md`](docs/superpowers/specs/2026-06-17-tidsro-slice3-design-polish-design.md).
 
 ## Install
 
@@ -26,21 +26,21 @@ Both builds are self-contained: they run on any 64-bit Windows PC with no .NET r
 
 ## Using Tidsro
 
-Launching Tidsro opens its window — it remembers where you last placed it. Closing the window tucks Tidsro back into the system tray, where it keeps running until you choose **Quit** from the tray menu; left-click the tray icon any time to reopen it. When Tidsro is started automatically with Windows, it stays quietly in the tray.
+Launching Tidsro opens its window — it remembers where you last placed it and how big it was. Closing the window tucks Tidsro back into the system tray, where it keeps running until you choose **Quit** from the tray menu; left-click the tray icon any time to reopen it. When Tidsro is started automatically with Windows, it stays quietly in the tray.
 
-- Pick a preset (15 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Invalid input shows a calm inline message.
+- Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss). Invalid input shows a calm inline message.
 - Choose a **sound** for the next timer from the dropdown — **▶** previews it. It starts from your default sound and applies to both presets and custom timers.
-- Multiple countdowns can run at once; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel. Paused timers dim; resetting while paused keeps the timer stopped at the start.
+- Multiple countdowns can run at once; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel — cancelling drops a brief **Undo** bar at the bottom. Paused timers dim; resetting while paused keeps the timer stopped at the start.
 - When a timer finishes, a calm card appears in the bottom-right corner. It does not steal focus.
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
   - Multiple finished cards stack upward and dismiss independently.
 
-**Your day** (clock-time alarms) lives below the countdown list. Type a time in HH:MM (24-hour), an optional label, choose a sound, and click **Add** — the alarm is saved immediately and fires once at the given time.
+**Your day** (clock-time alarms) lives below the countdown list. Type a time — `14:30`, or shorthand like `9`, `930`, or `1430` (24-hour) — an optional label, choose a sound, and click **Add** (or press **Enter**). The alarm is saved immediately and fires once at the given time.
 
 - If Tidsro isn't running when an alarm time passes, it fires within a 5-minute grace window on next launch.
-- Each alarm row shows its fire time, label, and sound. Click **Edit** (pencil) to change it in place; **Save** commits, **Cancel** discards.
-- **Delete** removes the alarm with a brief undo window — click **Undo** in the announcement bar to restore it.
+- Each alarm row shows its fire time, label, and sound. Click **Edit** (pencil) to change it in a dialog; **Save** commits, **Cancel** discards.
+- **Delete** removes the alarm with a brief undo window — click **Undo** in the bar at the bottom to restore it.
 - When an alarm fires, the same quiet bottom-right card appears, with **Snooze +5** (arms a 5-minute countdown) and **Dismiss**.
 
 - Open **Settings** (bottom-left of the main window) to toggle launch-at-startup and choose a default sound. Changes apply when you click **Save**; **Cancel**, **Esc**, or closing the window discards them.
