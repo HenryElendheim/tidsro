@@ -62,6 +62,13 @@
             <DataTemplate>
               <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
                       CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,0,0,12">
+                <Border.Triggers>
+                  <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard><Storyboard>
+                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+                    </Storyboard></BeginStoryboard>
+                  </EventTrigger>
+                </Border.Triggers>
                 <DockPanel>
                   <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding CancelCommand}"
                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
@@ -76,12 +83,21 @@
                   <StackPanel>
                     <TextBlock Text="{Binding Label}" Foreground="{StaticResource TextMuted}" FontSize="{StaticResource TextXs}"/>
                     <TextBlock Text="{Binding RemainingText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource Text2xl}">
+                      <TextBlock.Foreground><SolidColorBrush Color="#F4F7FA"/></TextBlock.Foreground>
                       <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                          <Setter Property="Foreground" Value="{StaticResource Text}"/>
                           <Style.Triggers>
                             <DataTrigger Binding="{Binding IsPaused}" Value="True">
-                              <Setter Property="Foreground" Value="{StaticResource TextMuted}"/>
+                              <DataTrigger.EnterActions>
+                                <BeginStoryboard><Storyboard>
+                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="#B4BDC7" Duration="0:0:0.18"/>
+                                </Storyboard></BeginStoryboard>
+                              </DataTrigger.EnterActions>
+                              <DataTrigger.ExitActions>
+                                <BeginStoryboard><Storyboard>
+                                  <ColorAnimation Storyboard.TargetProperty="(TextBlock.Foreground).(SolidColorBrush.Color)" To="#F4F7FA" Duration="0:0:0.18"/>
+                                </Storyboard></BeginStoryboard>
+                              </DataTrigger.ExitActions>
                             </DataTrigger>
                           </Style.Triggers>
                         </Style>
@@ -163,6 +179,13 @@
               <Border Padding="16" Margin="0,0,0,12" CornerRadius="{StaticResource RadiusMd}"
                       Background="{StaticResource CardBg}" BorderThickness="1"
                       AutomationProperties.Name="{Binding AccessibleName}">
+                <Border.Triggers>
+                  <EventTrigger RoutedEvent="Loaded">
+                    <BeginStoryboard><Storyboard>
+                      <DoubleAnimation Storyboard.TargetProperty="Opacity" From="0" To="1" Duration="0:0:0.18"/>
+                    </Storyboard></BeginStoryboard>
+                  </EventTrigger>
+                </Border.Triggers>
                 <Border.Style>
                   <Style TargetType="Border">
                     <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
