@@ -244,4 +244,66 @@ public class MainViewModelTests
         Assert.False(vm.IsEditingAlarm);
         Assert.Equal("", vm.AlarmTimeInput);
     }
+
+    [Fact]
+    public void DeleteAlarm_disarms_immediately_but_does_not_commit_yet()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+
+        Assert.Empty(vm.Alarms);                 // row gone
+        Assert.Empty(sched.Alarms);              // disarmed -> cannot fire during the undo window
+        Assert.True(vm.HasPendingDelete);
+        Assert.NotNull(vm.PendingDeleteLabel);
+        Assert.Equal(0, committed);              // not persisted yet (disk still has it)
+    }
+
+    [Fact]
+    public void UndoDelete_re_arms_the_alarm_with_its_original_id()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddOrSaveAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(id, row.Item.Id);
+        Assert.Equal("Tea", row.DisplayLabel);
+        Assert.Single(sched.Alarms);
+        Assert.False(vm.HasPendingDelete);
+    }
+
+    [Fact]
+    public void CommitPendingDelete_persists_the_removal()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
+
+        vm.CommitPendingDelete();
+
+        Assert.False(vm.HasPendingDelete);
+        Assert.Equal(1, committed);              // now it leaves disk
+    }
+
+    [Fact]
+    public void Deleting_a_second_alarm_commits_the_first_pending_delete()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        vm.AlarmTimeInput = "11:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);   // pending: 10:00
+        var committed = 0; vm.AlarmsChanged += (_, _) => committed++;
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);   // now 11:00; should commit the 10:00 delete first
+
+        Assert.Equal(1, committed);                    // the first delete committed
+        Assert.True(vm.HasPendingDelete);              // the second is now pending
+    }
 }

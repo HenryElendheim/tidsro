@@ -32,6 +32,10 @@ public partial class MainViewModel : ObservableObject
 
     private Guid? _editingId;   // the alarm being edited in place (wired further in a later task)
 
+    private TimerItem? _pendingDelete;
+    [ObservableProperty] private string? _pendingDeleteLabel;
+    public bool HasPendingDelete => _pendingDelete is not null;
+
     /// <summary>Raised when the armed alarm set changes (add/edit/delete-commit) so the App persists.</summary>
     public event EventHandler? AlarmsChanged;
     /// <summary>Raised with a short message for the View to announce via UIA (no focus change).</summary>
@@ -98,6 +102,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void AddOrSaveAlarm()
     {
+        CommitPendingDelete();
         if (!ClockTimeRules.TryParse(AlarmTimeInput, out var hour, out var minute, out var error))
         { AlarmError = error; return; }
         AlarmError = null;
@@ -141,6 +146,47 @@ public partial class MainViewModel : ObservableObject
     {
         ExitEditMode();
         ClearEditor();
+    }
+
+    [RelayCommand]
+    private void DeleteAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                 // only one outstanding undo at a time
+
+        var item = row.Item;
+        _scheduler.RemoveAlarm(item);          // disarm at once: it can't fire during the undo window
+        _pendingDelete = item;
+        PendingDeleteLabel = $"Deleted {row.TimeText}{(string.IsNullOrEmpty(row.Item.Label) ? "" : $" · {row.Item.Label}")}";
+        OnPropertyChanged(nameof(HasPendingDelete));
+
+        RebuildAgenda();
+        Announce($"Alarm at {row.TimeText} deleted");
+        // Note: not persisted yet. The on-disk record survives until CommitPendingDelete (auto-timeout / quit).
+    }
+
+    [RelayCommand]
+    private void UndoDelete()
+    {
+        if (_pendingDelete is not { EndsAt: { } fireAt } item) return;
+        _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+        _pendingDelete = null;
+        PendingDeleteLabel = null;
+        OnPropertyChanged(nameof(HasPendingDelete));
+
+        RebuildAgenda();
+        Announce("Alarm restored");
+        // No persist needed: the record was never removed from disk.
+    }
+
+    /// <summary>Finalise an outstanding delete: it leaves disk now. Called on timeout, on quit, or before another action.</summary>
+    public void CommitPendingDelete()
+    {
+        if (_pendingDelete is null) return;
+        _pendingDelete = null;
+        PendingDeleteLabel = null;
+        OnPropertyChanged(nameof(HasPendingDelete));
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the removal
     }
 
     private void ClearEditor()
