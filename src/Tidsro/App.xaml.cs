@@ -89,8 +89,8 @@ public partial class App : Application
         _sound.Play(item.Sound);
 
         var vm = new PopupViewModel(item,
-            onSnooze: i => _scheduler.Snooze(i, TimeSpan.FromMinutes(5)),
-            onRestart: i => _scheduler.Restart(i),
+            onSnooze: i => { var r = _scheduler.Snooze(i, TimeSpan.FromMinutes(5)); _mainVm.RefreshAll(); return r; },
+            onRestart: i => { var r = _scheduler.Restart(i); _mainVm.RefreshAll(); return r; },
             onDismiss: i => _scheduler.Cancel(i));
 
         var popup = new CompletionPopup(vm);

@@ -373,4 +373,117 @@ public class MainViewModelTests
         vm.DismissMissedNoteCommand.Execute(null);
         Assert.Null(vm.MissedNote);
     }
+
+    // ── CancelTimer: instant removal + undo ──────────────────────────────
+
+    [Fact]
+    public void CancelTimer_removes_the_row_immediately_without_waiting_for_a_tick()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(30);
+        var row = vm.Running[0];
+
+        vm.CancelTimerCommand.Execute(row);
+
+        Assert.Empty(vm.Running);              // gone at once, not deferred to the next RefreshAll
+    }
+
+    [Fact]
+    public void CancelTimer_sets_HasPendingDelete_and_shows_a_label()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "tea";
+        vm.StartCustomCommand.Execute(null);
+        var row = vm.Running[0];
+
+        vm.CancelTimerCommand.Execute(row);
+
+        Assert.True(vm.HasPendingDelete);
+        Assert.NotNull(vm.PendingDeleteLabel);
+        Assert.Contains("tea", vm.PendingDeleteLabel);
+    }
+
+    [Fact]
+    public void CancelTimer_announces_the_cancellation()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(15);
+        var row = vm.Running[0];
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.CancelTimerCommand.Execute(row);
+
+        Assert.NotNull(announced);
+        Assert.Contains("cancelled", announced, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void UndoDelete_after_timer_cancel_restores_a_running_countdown_with_the_captured_remaining()
+    {
+        var vm = New(out var clock, out var sched);
+        vm.StartPresetCommand.Execute(30);           // 30-minute countdown
+        clock.Advance(TimeSpan.FromMinutes(10));     // 10 minutes elapsed → 20 remaining
+        var row = vm.Running[0];
+
+        vm.CancelTimerCommand.Execute(row);
+        Assert.Empty(vm.Running);                    // confirm row gone
+
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.Single(vm.Running);
+        Assert.False(vm.HasPendingDelete);
+        Assert.Null(vm.PendingDeleteLabel);
+
+        // The restored timer should have ~20 minutes remaining (captured at cancel time)
+        var restoredRemaining = sched.Remaining(vm.Running[0].Item);
+        Assert.True(restoredRemaining >= TimeSpan.FromMinutes(19) && restoredRemaining <= TimeSpan.FromMinutes(20),
+            $"Expected ~20 min remaining, got {restoredRemaining}");
+    }
+
+    [Fact]
+    public void UndoDelete_after_timer_cancel_announces_restoration()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(5);
+        var row = vm.Running[0];
+        vm.CancelTimerCommand.Execute(row);
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.UndoDeleteCommand.Execute(null);
+
+        Assert.NotNull(announced);
+        Assert.Contains("restored", announced, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void CommitPendingDelete_after_timer_cancel_does_not_fire_AlarmsChanged()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(5);
+        vm.CancelTimerCommand.Execute(vm.Running[0]);
+        var alarmsChangedCount = 0; vm.AlarmsChanged += (_, _) => alarmsChangedCount++;
+
+        vm.CommitPendingDelete();
+
+        Assert.Equal(0, alarmsChangedCount);   // cancelled countdowns are not persisted
+        Assert.False(vm.HasPendingDelete);
+    }
+
+    [Fact]
+    public void Existing_alarm_undo_still_works_after_timer_cancel_changes()
+    {
+        var vm = New(out _, out var sched);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Stand-up";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.DeleteAlarmCommand.Execute(vm.Alarms[0]);
+        vm.UndoDeleteCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(id, row.Item.Id);               // same identity preserved
+        Assert.Equal("Stand-up", row.DisplayLabel);
+        Assert.Single(sched.Alarms);
+        Assert.False(vm.HasPendingDelete);
+    }
 }

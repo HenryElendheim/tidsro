@@ -45,7 +45,5 @@ public partial class TimerItemViewModel : ObservableObject
         Refresh();
     }
 
-    [RelayCommand] private void Cancel() => _scheduler.Cancel(Item);
-
     [RelayCommand] private void Reset() { _scheduler.Reset(Item); Refresh(); }
 }

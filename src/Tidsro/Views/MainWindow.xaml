@@ -80,7 +80,9 @@
                   </EventTrigger>
                 </Border.Triggers>
                 <DockPanel>
-                  <Button DockPanel.Dock="Right" Content="&#xE711;" Command="{Binding CancelCommand}"
+                  <Button DockPanel.Dock="Right" Content="&#xE711;"
+                          Command="{Binding DataContext.CancelTimerCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                          CommandParameter="{Binding}"
                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                           AutomationProperties.Name="Cancel timer" ToolTip="Cancel timer" Style="{StaticResource QuietAction}"/>
                   <Button DockPanel.Dock="Right" Content="&#xE72C;" Command="{Binding ResetCommand}"

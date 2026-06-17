@@ -35,6 +35,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _missedNote;
 
     private TimerItem? _pendingDelete;
+    private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a cancelled countdown
     [ObservableProperty] private string? _pendingDeleteLabel;
     public bool HasPendingDelete => _pendingDelete is not null;
 
@@ -89,6 +90,22 @@ public partial class MainViewModel : ObservableObject
         var label = string.IsNullOrWhiteSpace(Label) ? null : Label.Trim();
         var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
+    }
+
+    [RelayCommand]
+    private void CancelTimer(TimerItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                       // only one outstanding undo at a time
+        var item = row.Item;
+        var remaining = _scheduler.Remaining(item);  // capture BEFORE cancelling
+        _scheduler.Cancel(item);
+        Running.Remove(row);                         // instant removal — no 1s tick lag
+        _pendingDelete = item;
+        _pendingDeleteRemaining = remaining;
+        PendingDeleteLabel = $"Timer cancelled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";
+        OnPropertyChanged(nameof(HasPendingDelete));
+        Announce("Timer cancelled");
     }
 
     public void RefreshAll()
@@ -172,6 +189,7 @@ public partial class MainViewModel : ObservableObject
         var item = row.Item;
         _scheduler.RemoveAlarm(item);          // disarm at once: it can't fire during the undo window
         _pendingDelete = item;
+        _pendingDeleteRemaining = null;        // this is an alarm (re-armed on undo, not a countdown)
         PendingDeleteLabel = $"Deleted {row.TimeText}{(string.IsNullOrEmpty(row.Item.Label) ? "" : $" · {row.Item.Label}")}";
         OnPropertyChanged(nameof(HasPendingDelete));
 
@@ -183,25 +201,36 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void UndoDelete()
     {
-        if (_pendingDelete is not { EndsAt: { } fireAt } item) return;
-        _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+        if (_pendingDelete is not { } item) return;
+        if (item.TriggerType == TriggerType.Countdown)
+        {
+            var restored = _scheduler.StartCountdown(_pendingDeleteRemaining ?? TimeSpan.Zero, item.Label, item.Sound);
+            Running.Add(new TimerItemViewModel(restored, _scheduler));
+            Announce("Timer restored");
+        }
+        else if (item.EndsAt is { } fireAt)
+        {
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+            RebuildAgenda();
+            Announce("Alarm restored");
+            // No persist needed: the record was never removed from disk.
+        }
         _pendingDelete = null;
+        _pendingDeleteRemaining = null;
         PendingDeleteLabel = null;
         OnPropertyChanged(nameof(HasPendingDelete));
-
-        RebuildAgenda();
-        Announce("Alarm restored");
-        // No persist needed: the record was never removed from disk.
     }
 
-    /// <summary>Finalise an outstanding delete: it leaves disk now. Called on timeout, on quit, or before another action.</summary>
+    /// <summary>Finalise an outstanding delete: for alarms, it leaves disk now. Called on timeout, on quit, or before another action.</summary>
     public void CommitPendingDelete()
     {
-        if (_pendingDelete is null) return;
+        if (_pendingDelete is not { } item) return;
+        var wasAlarm = item.TriggerType == TriggerType.ClockTime;
         _pendingDelete = null;
+        _pendingDeleteRemaining = null;
         PendingDeleteLabel = null;
         OnPropertyChanged(nameof(HasPendingDelete));
-        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the removal
+        if (wasAlarm) AlarmsChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the alarm removal
     }
 
     private void ClearEditor()
