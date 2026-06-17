@@ -32,6 +32,8 @@ public partial class MainViewModel : ObservableObject
 
     private Guid? _editingId;   // the alarm being edited in place (wired further in a later task)
 
+    [ObservableProperty] private string? _missedNote;
+
     private TimerItem? _pendingDelete;
     [ObservableProperty] private string? _pendingDeleteLabel;
     public bool HasPendingDelete => _pendingDelete is not null;
@@ -97,6 +99,12 @@ public partial class MainViewModel : ObservableObject
         foreach (var item in _scheduler.Running)
             if (!Running.Any(vm => vm.Item == item))
                 Running.Add(new TimerItemViewModel(item, _scheduler));
+
+        // Reconcile the alarm agenda only when the armed set changed (fired/expired drops rows),
+        // so the collection isn't rebuilt every second (which would disrupt focus and announcements).
+        var live = _scheduler.Alarms.Select(a => a.Id).ToHashSet();
+        var shown = Alarms.Select(a => a.Item.Id).ToHashSet();
+        if (!live.SetEquals(shown)) RebuildAgenda();
     }
 
     [RelayCommand]
@@ -203,6 +211,21 @@ public partial class MainViewModel : ObservableObject
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);
+
+    /// <summary>Record an alarm that expired beyond the grace (sleep or app-closed) as one quiet line.</summary>
+    public void AddMissed(TimerItem item)
+    {
+        var time = item.EndsAt is { } e ? e.ToString("HH\\:mm") : "";
+        var label = string.IsNullOrWhiteSpace(item.Label) ? "Alarm" : item.Label!.Trim();
+        var line = $"{label} · {time}";
+        MissedNote = MissedNote is null
+            ? $"Missed while away: {line}"
+            : $"{MissedNote}; {line}";
+        Announce($"Missed while away: {line}");
+    }
+
+    [RelayCommand]
+    private void DismissMissedNote() => MissedNote = null;
 
     /// <summary>Rebuild the agenda from the scheduler's armed alarms: sorted, with tomorrow/next cues.</summary>
     private void RebuildAgenda()

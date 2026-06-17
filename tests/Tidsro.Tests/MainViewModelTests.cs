@@ -306,4 +306,50 @@ public class MainViewModelTests
         Assert.Equal(1, committed);                    // the first delete committed
         Assert.True(vm.HasPendingDelete);              // the second is now pending
     }
+
+    [Fact]
+    public void RefreshAll_drops_a_row_for_an_alarm_that_fired()
+    {
+        var vm = New(out var clock, out var sched);
+        vm.AlarmTimeInput = "09:30"; vm.AddOrSaveAlarmCommand.Execute(null);   // clock is 09:00
+        Assert.Single(vm.Alarms);
+
+        clock.Advance(TimeSpan.FromMinutes(31));   // past 09:30, within grace
+        sched.Tick();                              // fires + removes the alarm
+        vm.RefreshAll();
+
+        Assert.Empty(vm.Alarms);
+        Assert.True(vm.IsDayEmpty);
+    }
+
+    [Fact]
+    public void RefreshAll_does_not_rebuild_when_the_alarm_set_is_unchanged()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "16:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+        var rowInstance = vm.Alarms[0];
+
+        vm.RefreshAll();   // nothing changed
+
+        Assert.Same(rowInstance, vm.Alarms[0]);   // same VM kept -> focus/announcements not disrupted
+    }
+
+    [Fact]
+    public void AddMissed_builds_a_quiet_dismissible_note_and_announces()
+    {
+        var vm = New(out var clock, out var sched);
+        var item = sched.ArmClockAlarm(clock.Now.AddMinutes(-30), "Lunch", SoundChoice.Bell);
+        sched.RemoveAlarm(item);                    // simulate the scheduler having expired it
+        string? announced = null; vm.Announcement += (_, m) => announced = m;
+
+        vm.AddMissed(item);
+
+        Assert.NotNull(vm.MissedNote);
+        Assert.Contains("Lunch", vm.MissedNote);
+        Assert.Contains("Missed while away", vm.MissedNote);
+        Assert.NotNull(announced);
+
+        vm.DismissMissedNoteCommand.Execute(null);
+        Assert.Null(vm.MissedNote);
+    }
 }
