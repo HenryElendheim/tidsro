@@ -113,7 +113,7 @@ public partial class App : Application
     {
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
-                    _persistence, _mainVm.SetDefaultSound)),
+                    () => _persistence.Save(_settings), _mainVm.SetDefaultSound)),
             _settings, () => _persistence.Save(_settings));
         Application.Current.MainWindow = _main;
         _main.Show();
