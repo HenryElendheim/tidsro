@@ -171,6 +171,40 @@
     </Setter>
   </Style>
 
+  <!-- Dark text input with a placeholder hint (set via Tag) -->
+  <Style TargetType="TextBox">
+    <Setter Property="Background" Value="{StaticResource InteractiveBg}"/>
+    <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    <Setter Property="CaretBrush" Value="{StaticResource Text}"/>
+    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="8,6"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="TextBox">
+          <Border x:Name="bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                  BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+            <Grid>
+              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}" VerticalAlignment="Center"/>
+              <TextBlock x:Name="hint" Text="{TemplateBinding Tag}" Foreground="{StaticResource TextFaint}"
+                         Margin="{TemplateBinding Padding}" VerticalAlignment="Center" IsHitTestVisible="False"
+                         Visibility="Collapsed"/>
+            </Grid>
+          </Border>
+          <ControlTemplate.Triggers>
+            <Trigger Property="Text" Value="">
+              <Setter TargetName="hint" Property="Visibility" Value="Visible"/>
+            </Trigger>
+            <Trigger Property="IsKeyboardFocused" Value="True">
+              <Setter TargetName="bd" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
+
   <!-- Dark ComboBox: the default popup is light-on-dark and illegible. Restyle the toggle + items. -->
   <Style x:Key="ComboItem" TargetType="ComboBoxItem">
     <Setter Property="Background" Value="{StaticResource ElevatedBg}"/>
@@ -214,6 +248,7 @@
                       </Grid.ColumnDefinitions>
                       <ContentPresenter Grid.Column="0" Content="{Binding SelectionBoxItem, RelativeSource={RelativeSource AncestorType=ComboBox}}"
                                         ContentTemplate="{Binding ItemTemplate, RelativeSource={RelativeSource AncestorType=ComboBox}}"
+                                        TextElement.Foreground="{StaticResource Text}"
                                         VerticalAlignment="Center"/>
                       <TextBlock Grid.Column="1" Text="&#xE70D;" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                                  Foreground="{StaticResource TextMuted}" VerticalAlignment="Center" Margin="8,0,0,0"/>

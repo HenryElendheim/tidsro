@@ -39,9 +39,13 @@
             <Grid>
               <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <TextBox Grid.Column="0" Text="{Binding CustomInput, UpdateSourceTrigger=PropertyChanged}"
-                       AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00"/>
+                       AutomationProperties.Name="Custom duration" ToolTip="e.g. 25, 5:00, 1:30:00" Tag="25 min">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding StartCustomCommand}"/></TextBox.InputBindings>
+              </TextBox>
               <TextBox Grid.Column="1" Text="{Binding Label, UpdateSourceTrigger=PropertyChanged}"
-                       AutomationProperties.Name="Label" Margin="10,0,0,0"/>
+                       AutomationProperties.Name="Label" Margin="10,0,0,0" Tag="Label">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding StartCustomCommand}"/></TextBox.InputBindings>
+              </TextBox>
             </Grid>
             <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
@@ -128,9 +132,13 @@
               <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
               <TextBox Grid.Column="0" Width="64" x:Name="AlarmTimeBox"
                        Text="{Binding AlarmTimeInput, UpdateSourceTrigger=PropertyChanged}"
-                       AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30"/>
+                       AutomationProperties.Name="Time" ToolTip="24-hour time, e.g. 14:30" Tag="14:30">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddOrSaveAlarmCommand}"/></TextBox.InputBindings>
+              </TextBox>
               <TextBox Grid.Column="1" Text="{Binding AlarmLabel, UpdateSourceTrigger=PropertyChanged}"
-                       AutomationProperties.Name="Alarm label" Margin="10,0,0,0"/>
+                       AutomationProperties.Name="Alarm label" Margin="10,0,0,0" Tag="Alarm label">
+                <TextBox.InputBindings><KeyBinding Key="Enter" Command="{Binding AddOrSaveAlarmCommand}"/></TextBox.InputBindings>
+              </TextBox>
             </Grid>
             <Grid Margin="0,12,0,0">
               <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
