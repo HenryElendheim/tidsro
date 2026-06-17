@@ -192,4 +192,56 @@ public class MainViewModelTests
         Assert.NotNull(announced);
         Assert.Contains("10:00", announced);
     }
+
+    [Fact]
+    public void BeginEdit_loads_the_row_into_the_editor_and_enters_edit_mode()
+    {
+        var vm = New(out _, out _);                         // 09:00
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AlarmSound = SoundChoice.Bell;
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        var row = vm.Alarms[0];
+
+        vm.BeginEditAlarmCommand.Execute(row);
+
+        Assert.True(vm.IsEditingAlarm);
+        Assert.Equal("Save", vm.AddOrSaveLabel);
+        Assert.Equal("10:00", vm.AlarmTimeInput);
+        Assert.Equal("Tea", vm.AlarmLabel);
+        Assert.Equal(SoundChoice.Bell, vm.AlarmSound);
+    }
+
+    [Fact]
+    public void Save_in_edit_mode_updates_the_alarm_in_place_keeping_its_id()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        var originalId = vm.Alarms[0].Item.Id;
+
+        vm.BeginEditAlarmCommand.Execute(vm.Alarms[0]);
+        vm.AlarmTimeInput = "11:15"; vm.AlarmLabel = "Coffee";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);                // still one alarm, not a duplicate
+        Assert.Equal(originalId, row.Item.Id);
+        Assert.Equal("11:15", row.TimeText);
+        Assert.Equal("Coffee", row.DisplayLabel);
+        Assert.False(vm.IsEditingAlarm);                   // back to add mode
+        Assert.Equal("Add", vm.AddOrSaveLabel);
+    }
+
+    [Fact]
+    public void Cancel_edit_leaves_the_alarm_unchanged_and_clears_the_editor()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddOrSaveAlarmCommand.Execute(null);
+
+        vm.BeginEditAlarmCommand.Execute(vm.Alarms[0]);
+        vm.AlarmTimeInput = "23:00";                        // start changing...
+        vm.CancelEditAlarmCommand.Execute(null);           // ...then bail
+
+        Assert.Equal("10:00", Assert.Single(vm.Alarms).TimeText);   // unchanged
+        Assert.False(vm.IsEditingAlarm);
+        Assert.Equal("", vm.AlarmTimeInput);
+    }
 }

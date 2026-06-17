@@ -124,6 +124,25 @@ public partial class MainViewModel : ObservableObject
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
     }
 
+    [RelayCommand]
+    private void BeginEditAlarm(AlarmItemViewModel? row)
+    {
+        if (row?.Item.EndsAt is not { } fireAt) return;
+        _editingId = row.Item.Id;
+        AlarmTimeInput = fireAt.ToString("HH\\:mm");
+        AlarmLabel = row.Item.Label ?? "";
+        AlarmSound = row.Item.Sound;
+        AlarmError = null;
+        IsEditingAlarm = true;
+    }
+
+    [RelayCommand]
+    private void CancelEditAlarm()
+    {
+        ExitEditMode();
+        ClearEditor();
+    }
+
     private void ClearEditor()
     {
         AlarmTimeInput = "";
