@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using Tidsro.Models;
 using Tidsro.Services;
@@ -15,12 +16,14 @@ public partial class MainWindow : Window
     private readonly DispatcherTimer _undoTimer;
 
     public MainWindow(MainViewModel vm, Func<SettingsWindow> settingsFactory,
+                      Func<AlarmItemViewModel, EditAlarmWindow> editAlarmFactory,
                       AppSettings settings, Action persist)
     {
         InitializeComponent();
         DataContext = vm;
 
         vm.Announcement += (_, message) => UiaNotifier.Announce(this, message);
+        vm.EditAlarmRequested += (_, row) => { var dlg = editAlarmFactory(row); dlg.Owner = this; dlg.ShowDialog(); };
 
         _undoTimer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(9) };   // comfortable undo floor (spec §3.1)
         _undoTimer.Tick += (_, _) => { _undoTimer.Stop(); vm.CommitPendingDelete(); };
@@ -35,11 +38,15 @@ public partial class MainWindow : Window
         _settings = settings;
         _persist = persist;
         ApplyPlacement();
+        SizeChanged += (_, _) => ApplyLayout();
+        Loaded += (_, _) => ApplyLayout();
     }
 
     // First show: restore the last on-screen position, or centre on first run.
     private void ApplyPlacement()
     {
+        if (_settings.WindowWidth is double w) Width = w;
+        if (_settings.WindowHeight is double h) Height = h;
         if (_settings.WindowLeft is double left && _settings.WindowTop is double top && IsOnScreen(left, top))
         {
             WindowStartupLocation = WindowStartupLocation.Manual;
@@ -49,6 +56,49 @@ public partial class MainWindow : Window
         else
         {
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+    }
+
+    private const double WideBreakpoint = 760;
+    private bool? _wideApplied;   // current layout mode; skip the rebuild unless the breakpoint flips
+
+    // Narrow: sections stack with a horizontal divider. Wide: side by side with a vertical divider.
+    private void ApplyLayout()
+    {
+        var wide = ActualWidth >= WideBreakpoint;
+        if (_wideApplied == wide) return;   // same mode as last time — nothing to rebuild
+        _wideApplied = wide;
+        Sections.ColumnDefinitions.Clear();
+        Sections.RowDefinitions.Clear();
+        if (wide)
+        {
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetRow(QuickPanel, 0); Grid.SetColumn(QuickPanel, 0);
+            Grid.SetRow(Divider, 0); Grid.SetColumn(Divider, 1);
+            Grid.SetRow(DayPanel, 0); Grid.SetColumn(DayPanel, 2);
+            QuickPanel.Margin = new Thickness(0, 0, 20, 0);
+            DayPanel.Margin = new Thickness(20, 0, 0, 0);
+            Divider.Width = 1; Divider.Height = double.NaN;
+            Divider.HorizontalAlignment = HorizontalAlignment.Center;
+            Divider.VerticalAlignment = VerticalAlignment.Stretch;
+            Divider.Margin = new Thickness(0, 8, 0, 8);
+        }
+        else
+        {
+            Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetColumn(QuickPanel, 0); Grid.SetRow(QuickPanel, 0);
+            Grid.SetColumn(Divider, 0); Grid.SetRow(Divider, 1);
+            Grid.SetColumn(DayPanel, 0); Grid.SetRow(DayPanel, 2);
+            QuickPanel.Margin = new Thickness(0);
+            DayPanel.Margin = new Thickness(0);
+            Divider.Width = double.NaN; Divider.Height = 1;
+            Divider.HorizontalAlignment = HorizontalAlignment.Stretch;
+            Divider.VerticalAlignment = VerticalAlignment.Center;
+            Divider.Margin = new Thickness(0, 16, 0, 16);
         }
     }
 
@@ -73,6 +123,8 @@ public partial class MainWindow : Window
     private void SavePlacement()
     {
         if (WindowState != WindowState.Normal) return;   // store a usable position, not minimised/maximised
+        _settings.WindowWidth = Width;
+        _settings.WindowHeight = Height;
         _settings.WindowLeft = Left;
         _settings.WindowTop = Top;
         try { _persist(); } catch { /* position is a nicety; never block hiding */ }

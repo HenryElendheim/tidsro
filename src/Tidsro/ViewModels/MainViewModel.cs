@@ -28,13 +28,11 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _alarmLabel = "";
     [ObservableProperty] private string? _alarmError;
     [ObservableProperty] private SoundChoice _alarmSound;
-    [ObservableProperty] private bool _isEditingAlarm;
-
-    private Guid? _editingId;   // the alarm being edited in place; null in add mode
 
     [ObservableProperty] private string? _missedNote;
 
     private TimerItem? _pendingDelete;
+    private TimeSpan? _pendingDeleteRemaining;   // non-null when the pending item is a cancelled countdown
     [ObservableProperty] private string? _pendingDeleteLabel;
     public bool HasPendingDelete => _pendingDelete is not null;
 
@@ -42,9 +40,8 @@ public partial class MainViewModel : ObservableObject
     public event EventHandler? AlarmsChanged;
     /// <summary>Raised with a short message for the View to announce via UIA (no focus change).</summary>
     public event EventHandler<string>? Announcement;
-
-    public string AddOrSaveLabel => IsEditingAlarm ? "Save" : "Add";
-    partial void OnIsEditingAlarmChanged(bool value) => OnPropertyChanged(nameof(AddOrSaveLabel));
+    /// <summary>Raised when the user picks an agenda row to edit, so the View opens the modal Edit-alarm dialog.</summary>
+    public event EventHandler<AlarmItemViewModel>? EditAlarmRequested;
 
     public bool IsDayEmpty => Alarms.Count == 0;
 
@@ -86,9 +83,28 @@ public partial class MainViewModel : ObservableObject
 
     private void Add(TimeSpan duration)
     {
-        var label = string.IsNullOrWhiteSpace(Label) ? null : Label.Trim();
+        var label = string.IsNullOrWhiteSpace(Label) ? null : CapitalizeFirst(Label.Trim());
         var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
+    }
+
+    private static string CapitalizeFirst(string s) =>
+        s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
+
+    [RelayCommand]
+    private void CancelTimer(TimerItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                       // only one outstanding undo at a time
+        var item = row.Item;
+        var remaining = _scheduler.Remaining(item);  // capture BEFORE cancelling
+        _scheduler.Cancel(item);
+        Running.Remove(row);                         // instant removal — no 1s tick lag
+        _pendingDelete = item;
+        _pendingDeleteRemaining = remaining;
+        PendingDeleteLabel = $"Timer cancelled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";
+        OnPropertyChanged(nameof(HasPendingDelete));
+        Announce("Timer cancelled");
     }
 
     public void RefreshAll()
@@ -114,53 +130,45 @@ public partial class MainViewModel : ObservableObject
         if (!live.SetEquals(shown)) RebuildAgenda();
     }
 
+    // Add-only now: editing happens in the modal Edit-alarm dialog (see BeginEditAlarm / ApplyAlarmEdit).
     [RelayCommand]
-    private void AddOrSaveAlarm()
+    private void AddAlarm()
     {
         CommitPendingDelete();
         if (!ClockTimeRules.TryParse(AlarmTimeInput, out var hour, out var minute, out var error))
         { AlarmError = error; return; }
         AlarmError = null;
 
-        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : AlarmLabel.Trim();
+        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
         var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-
-        if (_editingId is { } id)                                   // edit in place
-        {
-            var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
-            if (existing is not null) _scheduler.RemoveAlarm(existing);
-            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound, id);
-            ExitEditMode();
-            Announce($"Alarm updated for {fireAt:HH\\:mm}");
-        }
-        else
-        {
-            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
-            Announce($"Alarm added for {fireAt:HH\\:mm}");
-        }
+        _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
 
         RebuildAgenda();
         ClearEditor();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
+        Announce($"Alarm added for {fireAt:HH\\:mm}");
     }
 
     [RelayCommand]
     private void BeginEditAlarm(AlarmItemViewModel? row)
     {
-        if (row?.Item.EndsAt is not { } fireAt) return;
-        _editingId = row.Item.Id;
-        AlarmTimeInput = fireAt.ToString("HH\\:mm");
-        AlarmLabel = row.Item.Label ?? "";
-        AlarmSound = row.Item.Sound;
-        AlarmError = null;
-        IsEditingAlarm = true;
+        if (row is null) return;
+        CommitPendingDelete();                 // settle any outstanding undo first
+        EditAlarmRequested?.Invoke(this, row);
     }
 
-    [RelayCommand]
-    private void CancelEditAlarm()
+    // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
+    // label like the add path. Mirrors the former in-place edit branch.
+    public void ApplyAlarmEdit(Guid id, int hour, int minute, string? label, SoundChoice sound)
     {
-        ExitEditMode();
-        ClearEditor();
+        var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
+        if (existing is not null) _scheduler.RemoveAlarm(existing);
+        var clean = string.IsNullOrWhiteSpace(label) ? null : CapitalizeFirst(label.Trim());
+        var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+        _scheduler.ArmClockAlarm(fireAt, clean, sound, id);
+        RebuildAgenda();
+        Announce($"Alarm updated for {fireAt:HH\\:mm}");
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);
     }
 
     [RelayCommand]
@@ -172,6 +180,7 @@ public partial class MainViewModel : ObservableObject
         var item = row.Item;
         _scheduler.RemoveAlarm(item);          // disarm at once: it can't fire during the undo window
         _pendingDelete = item;
+        _pendingDeleteRemaining = null;        // this is an alarm (re-armed on undo, not a countdown)
         PendingDeleteLabel = $"Deleted {row.TimeText}{(string.IsNullOrEmpty(row.Item.Label) ? "" : $" · {row.Item.Label}")}";
         OnPropertyChanged(nameof(HasPendingDelete));
 
@@ -183,25 +192,36 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void UndoDelete()
     {
-        if (_pendingDelete is not { EndsAt: { } fireAt } item) return;
-        _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+        if (_pendingDelete is not { } item) return;
+        if (item.TriggerType == TriggerType.Countdown)
+        {
+            var restored = _scheduler.StartCountdown(_pendingDeleteRemaining ?? TimeSpan.Zero, item.Label, item.Sound);
+            Running.Add(new TimerItemViewModel(restored, _scheduler));
+            Announce("Timer restored");
+        }
+        else if (item.EndsAt is { } fireAt)
+        {
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id);   // re-arm; next tick re-checks grace if past
+            RebuildAgenda();
+            Announce("Alarm restored");
+            // No persist needed: the record was never removed from disk.
+        }
         _pendingDelete = null;
+        _pendingDeleteRemaining = null;
         PendingDeleteLabel = null;
         OnPropertyChanged(nameof(HasPendingDelete));
-
-        RebuildAgenda();
-        Announce("Alarm restored");
-        // No persist needed: the record was never removed from disk.
     }
 
-    /// <summary>Finalise an outstanding delete: it leaves disk now. Called on timeout, on quit, or before another action.</summary>
+    /// <summary>Finalise an outstanding delete: for alarms, it leaves disk now. Called on timeout, on quit, or before another action.</summary>
     public void CommitPendingDelete()
     {
-        if (_pendingDelete is null) return;
+        if (_pendingDelete is not { } item) return;
+        var wasAlarm = item.TriggerType == TriggerType.ClockTime;
         _pendingDelete = null;
+        _pendingDeleteRemaining = null;
         PendingDeleteLabel = null;
         OnPropertyChanged(nameof(HasPendingDelete));
-        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the removal
+        if (wasAlarm) AlarmsChanged?.Invoke(this, EventArgs.Empty);   // disk now reflects the alarm removal
     }
 
     private void ClearEditor()
@@ -209,12 +229,6 @@ public partial class MainViewModel : ObservableObject
         AlarmTimeInput = "";
         AlarmLabel = "";
         AlarmError = null;
-    }
-
-    private void ExitEditMode()
-    {
-        _editingId = null;
-        IsEditingAlarm = false;
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);

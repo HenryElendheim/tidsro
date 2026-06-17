@@ -63,7 +63,7 @@ public partial class App : Application
         _scheduler.Fired += OnTimerFired;
         _scheduler.Expired += (_, item) => { _mainVm.AddMissed(item); SaveData(); };
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
+        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(250) };
         _timer.Tick += (_, _) => { _scheduler.Tick(); _mainVm.RefreshAll(); };
         _timer.Start();
 
@@ -89,8 +89,8 @@ public partial class App : Application
         _sound.Play(item.Sound);
 
         var vm = new PopupViewModel(item,
-            onSnooze: i => _scheduler.Snooze(i, TimeSpan.FromMinutes(5)),
-            onRestart: i => _scheduler.Restart(i),
+            onSnooze: i => { var r = _scheduler.Snooze(i, TimeSpan.FromMinutes(5)); _mainVm.RefreshAll(); return r; },
+            onRestart: i => { var r = _scheduler.Restart(i); _mainVm.RefreshAll(); return r; },
             onDismiss: i => _scheduler.Cancel(i));
 
         var popup = new CompletionPopup(vm);
@@ -122,10 +122,13 @@ public partial class App : Application
 
     private void ShowMainWindow()
     {
+        Func<AlarmItemViewModel, EditAlarmWindow> editFactory = row => new EditAlarmWindow(
+            new EditAlarmViewModel(row.Item.Id, row.Item.EndsAt?.ToString("HH\\:mm") ?? "",
+                row.Item.Label ?? "", row.Item.Sound, _mainVm.SoundOptions, _mainVm.ApplyAlarmEdit, _sound));
         _main ??= new MainWindow(_mainVm, () => new SettingsWindow(
                 new SettingsViewModel(_settings, new StartupService(StartupService.CurrentExePath),
                     SaveData, _mainVm.SetDefaultSound)),
-            _settings, SaveData);
+            editFactory, _settings, SaveData);
         Application.Current.MainWindow = _main;
         _main.Show();
         _main.WindowState = WindowState.Normal;

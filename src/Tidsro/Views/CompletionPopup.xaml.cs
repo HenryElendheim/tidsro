@@ -49,12 +49,20 @@ public partial class CompletionPopup : Window
         Loaded += (_, _) =>
         {
             UiaNotifier.Announce(this, $"{_vm.Title} complete");
-            if (!SystemParameters.ClientAreaAnimation)   // reduced motion -> no fade
-            { Opacity = 1; return; }
+            if (!SystemParameters.ClientAreaAnimation)   // reduced motion -> no fade/slide
+            {
+                Opacity = 1;
+                if (Root.RenderTransform is System.Windows.Media.TranslateTransform t0) t0.Y = 0;
+                return;
+            }
             Opacity = 0;
-            var fade = new System.Windows.Media.Animation.DoubleAnimation(0, 1,
-                (Duration)FindResource("DurationBase")) { EasingFunction = new System.Windows.Media.Animation.CubicEase() };
-            BeginAnimation(OpacityProperty, fade);
+            var dur = (Duration)FindResource("DurationBase");
+            BeginAnimation(OpacityProperty, new System.Windows.Media.Animation.DoubleAnimation(0, 1, dur)
+                { EasingFunction = new System.Windows.Media.Animation.CubicEase() });
+            if (Root.RenderTransform is System.Windows.Media.TranslateTransform tt)
+                tt.BeginAnimation(System.Windows.Media.TranslateTransform.YProperty,
+                    new System.Windows.Media.Animation.DoubleAnimation(12, 0, dur)
+                    { EasingFunction = new System.Windows.Media.Animation.CubicEase { EasingMode = System.Windows.Media.Animation.EasingMode.EaseOut } });
         };
         Closed += (_, _) => NativeFocus.Restore(_previousForeground);
     }

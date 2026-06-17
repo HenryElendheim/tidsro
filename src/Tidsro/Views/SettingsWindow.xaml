@@ -4,11 +4,11 @@
         Title="Settings" Width="360" SizeToContent="Height" WindowStartupLocation="CenterOwner"
         Background="{StaticResource PageBg}" Foreground="{StaticResource Text}"
         FontFamily="{StaticResource FontSans}">
-  <StackPanel Margin="16">
+  <StackPanel Margin="24">
     <CheckBox Content="Launch Tidsro at startup" IsChecked="{Binding LaunchAtStartup}"
               Foreground="{StaticResource Text}"
-              AutomationProperties.Name="Launch at startup" Margin="0,0,0,16"/>
-    <TextBlock Text="Default sound for new timers" Margin="0,0,0,4"/>
+              AutomationProperties.Name="Launch at startup" Margin="0,0,0,20"/>
+    <TextBlock Text="Default sound for new timers" Margin="0,0,0,8"/>
     <ComboBox ItemsSource="{Binding SoundOptions}" SelectedItem="{Binding DefaultSound}"
               AutomationProperties.Name="Default sound">
       <ComboBox.ItemTemplate>
@@ -17,8 +17,8 @@
         </DataTemplate>
       </ComboBox.ItemTemplate>
     </ComboBox>
-    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,16,0,0">
-      <Button Content="Save" Style="{StaticResource QuietAction}" IsDefault="True"
+    <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,24,0,0">
+      <Button Content="Save" Style="{StaticResource GoldAction}" IsDefault="True"
               MinWidth="84" Margin="0,0,8,0" Click="Save_Click"
               AutomationProperties.Name="Save settings"/>
       <Button Content="Cancel" Style="{StaticResource QuietAction}" IsCancel="True"

@@ -9,6 +9,8 @@ public sealed class AppSettings
     // Last on-screen window position; null until the window has been shown and dismissed once.
     public double? WindowLeft { get; set; }
     public double? WindowTop { get; set; }
+    public double? WindowWidth { get; set; }
+    public double? WindowHeight { get; set; }
 
     public static AppSettings Defaults() => new();
 
@@ -20,5 +22,7 @@ public sealed class AppSettings
         DefaultSound = Enum.IsDefined(DefaultSound) ? DefaultSound : SoundChoice.None,
         WindowLeft = WindowLeft is double l && double.IsFinite(l) ? l : null,
         WindowTop = WindowTop is double t && double.IsFinite(t) ? t : null,
+        WindowWidth = WindowWidth is double w && double.IsFinite(w) && w >= 380 ? w : null,
+        WindowHeight = WindowHeight is double h && double.IsFinite(h) && h >= 480 ? h : null,
     };
 }
