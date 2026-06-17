@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Threading;
 using Tidsro.Models;
 using Tidsro.Services;
@@ -35,6 +36,8 @@ public partial class MainWindow : Window
         _settings = settings;
         _persist = persist;
         ApplyPlacement();
+        SizeChanged += (_, _) => ApplyLayout();
+        Loaded += (_, _) => ApplyLayout();
     }
 
     // First show: restore the last on-screen position, or centre on first run.
@@ -51,6 +54,34 @@ public partial class MainWindow : Window
         else
         {
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
+        }
+    }
+
+    private const double WideBreakpoint = 760;
+
+    // Narrow: the two sections stack in one column. Wide: side by side, equal width.
+    private void ApplyLayout()
+    {
+        var wide = ActualWidth >= WideBreakpoint;
+        Sections.ColumnDefinitions.Clear();
+        Sections.RowDefinitions.Clear();
+        if (wide)
+        {
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Sections.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
+            Grid.SetRow(QuickPanel, 0); Grid.SetColumn(QuickPanel, 0);
+            Grid.SetRow(DayPanel, 0); Grid.SetColumn(DayPanel, 1);
+            QuickPanel.Margin = new Thickness(0, 0, 12, 0);
+            DayPanel.Margin = new Thickness(12, 0, 0, 0);
+        }
+        else
+        {
+            Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Sections.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
+            Grid.SetRow(QuickPanel, 0); Grid.SetColumn(QuickPanel, 0);
+            Grid.SetRow(DayPanel, 1); Grid.SetColumn(DayPanel, 0);
+            QuickPanel.Margin = new Thickness(0);
+            DayPanel.Margin = new Thickness(0, 24, 0, 0);
         }
     }
 

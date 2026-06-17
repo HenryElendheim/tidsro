@@ -13,7 +13,12 @@
     </Grid.RowDefinitions>
 
     <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
-      <StackPanel MaxWidth="640">
+      <Grid x:Name="Sections">
+        <Grid.RowDefinitions>
+          <RowDefinition Height="Auto"/>
+          <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel x:Name="QuickPanel" Grid.Row="0">
 
         <TextBlock Text="Quick timers" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
         <StackPanel Orientation="Horizontal">
@@ -111,7 +116,10 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-        <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,28,0,14"/>
+        </StackPanel>
+        <StackPanel x:Name="DayPanel" Grid.Row="1" Margin="0,24,0,0">
+
+        <TextBlock Text="Your day" FontSize="{StaticResource TextXl}" Margin="0,0,0,14"/>
 
         <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
                 CornerRadius="{StaticResource RadiusMd}" Padding="16">
@@ -228,7 +236,8 @@
           </ItemsControl.ItemTemplate>
         </ItemsControl>
 
-      </StackPanel>
+        </StackPanel>
+      </Grid>
     </ScrollViewer>
 
     <Button Grid.Row="1" Content="Settings" HorizontalAlignment="Left" Click="OnSettings" Style="{StaticResource QuietAction}" Margin="0,16,0,0"/>
