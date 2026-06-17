@@ -87,10 +87,13 @@ public partial class MainViewModel : ObservableObject
 
     private void Add(TimeSpan duration)
     {
-        var label = string.IsNullOrWhiteSpace(Label) ? null : Label.Trim();
+        var label = string.IsNullOrWhiteSpace(Label) ? null : CapitalizeFirst(Label.Trim());
         var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
     }
+
+    private static string CapitalizeFirst(string s) =>
+        s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
 
     [RelayCommand]
     private void CancelTimer(TimerItemViewModel? row)
@@ -139,7 +142,7 @@ public partial class MainViewModel : ObservableObject
         { AlarmError = error; return; }
         AlarmError = null;
 
-        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : AlarmLabel.Trim();
+        var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
         var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
 
         if (_editingId is { } id)                                   // edit in place

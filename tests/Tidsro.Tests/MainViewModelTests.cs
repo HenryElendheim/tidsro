@@ -37,7 +37,7 @@ public class MainViewModelTests
         vm.StartCustomCommand.Execute(null);
         Assert.Single(vm.Running);
         Assert.Null(vm.CustomError);
-        Assert.Equal("tea", vm.Running[0].Label);
+        Assert.Equal("Tea", vm.Running[0].Label);   // first letter is capitalized
     }
 
     [Fact]
@@ -400,7 +400,7 @@ public class MainViewModelTests
 
         Assert.True(vm.HasPendingDelete);
         Assert.NotNull(vm.PendingDeleteLabel);
-        Assert.Contains("tea", vm.PendingDeleteLabel);
+        Assert.Contains("Tea", vm.PendingDeleteLabel);   // label is capitalized
     }
 
     [Fact]
@@ -485,5 +485,79 @@ public class MainViewModelTests
         Assert.Equal("Stand-up", row.DisplayLabel);
         Assert.Single(sched.Alarms);
         Assert.False(vm.HasPendingDelete);
+    }
+
+    // ── Label auto-capitalization ─────────────────────────────────────────
+
+    [Fact]
+    public void StartCustom_capitalizes_first_letter_of_timer_label()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "tea";
+        vm.StartCustomCommand.Execute(null);
+        Assert.Equal("Tea", vm.Running[0].Label);
+    }
+
+    [Fact]
+    public void StartCustom_capitalizes_single_char_timer_label()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "a";
+        vm.StartCustomCommand.Execute(null);
+        Assert.Equal("A", vm.Running[0].Label);
+    }
+
+    [Fact]
+    public void StartCustom_leaves_rest_of_timer_label_unchanged()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "morning tea";
+        vm.StartCustomCommand.Execute(null);
+        Assert.Equal("Morning tea", vm.Running[0].Label);
+    }
+
+    [Fact]
+    public void StartCustom_empty_timer_label_stays_null()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "";
+        vm.StartCustomCommand.Execute(null);
+        Assert.Null(vm.Running[0].Label);
+    }
+
+    [Fact]
+    public void AddAlarm_capitalizes_first_letter_of_alarm_label()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "tea";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        Assert.Equal("Tea", vm.Alarms[0].DisplayLabel);
+    }
+
+    [Fact]
+    public void AddAlarm_capitalizes_single_char_alarm_label()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "a";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        Assert.Equal("A", vm.Alarms[0].DisplayLabel);
+    }
+
+    [Fact]
+    public void AddAlarm_leaves_rest_of_alarm_label_unchanged()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "morning tea";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        Assert.Equal("Morning tea", vm.Alarms[0].DisplayLabel);
+    }
+
+    [Fact]
+    public void AddAlarm_empty_alarm_label_stays_null()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "";
+        vm.AddOrSaveAlarmCommand.Execute(null);
+        Assert.Null(vm.Alarms[0].Item.Label);
     }
 }
