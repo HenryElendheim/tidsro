@@ -151,4 +151,78 @@ public class SchedulerServiceTests
         c.Advance(TimeSpan.FromMinutes(5));
         Assert.Equal(c.Now, s.Now);
     }
+
+    [Fact]
+    public void Tick_fires_an_alarm_at_or_after_its_time_within_grace()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), "lunch", SoundChoice.Bell);
+        TimerItem? fired = null; s.Fired += (_, i) => fired = i;
+
+        c.Advance(TimeSpan.FromMinutes(10));               // exactly at FireAt
+        s.Tick();
+
+        Assert.Same(alarm, fired);
+        Assert.Equal(TimerState.Fired, alarm.State);
+        Assert.Empty(s.Alarms);                            // one-shot removed after firing
+    }
+
+    [Fact]
+    public void Tick_fires_within_the_five_minute_grace_after_a_gap()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), null, SoundChoice.None);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(1) + TimeSpan.FromMinutes(5));   // 5 min late == on the boundary
+        s.Tick();
+
+        Assert.Equal(1, fired);                            // boundary is inclusive
+        Assert.Empty(s.Alarms);
+    }
+
+    [Fact]
+    public void Tick_expires_an_alarm_past_the_grace_without_firing()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), "missed", SoundChoice.Bell);
+        var fired = 0; s.Fired += (_, _) => fired++;
+        TimerItem? expired = null; s.Expired += (_, i) => expired = i;
+
+        c.Advance(TimeSpan.FromMinutes(1) + TimeSpan.FromMinutes(6));   // 6 min late, past grace
+        s.Tick();
+
+        Assert.Equal(0, fired);                            // no sound, no card
+        Assert.Same(alarm, expired);                       // reported for the missed-while-away note
+        Assert.Empty(s.Alarms);
+    }
+
+    [Fact]
+    public void Tick_fires_an_alarm_at_most_once_even_across_repeated_ticks()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), null, SoundChoice.None);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(2));
+        s.Tick(); s.Tick();                                // a sleep-induced double tick
+
+        Assert.Equal(1, fired);                            // removed after the first fire -> durable dedup
+    }
+
+    [Fact]
+    public void Tick_keeps_alarms_and_countdowns_independent()
+    {
+        var (s, c) = New();
+        var countdown = s.StartCountdown(TimeSpan.FromMinutes(1), "cd", SoundChoice.None);
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), "al", SoundChoice.None);
+
+        c.Advance(TimeSpan.FromMinutes(2));                // countdown due, alarm not
+        s.Tick();
+
+        Assert.Equal(TimerState.Fired, countdown.State);
+        Assert.Contains(countdown, s.Running);             // a fired countdown stays until dismissed
+        Assert.Single(s.Alarms);                           // alarm untouched
+        Assert.Equal(TimerState.Running, alarm.State);
+    }
 }

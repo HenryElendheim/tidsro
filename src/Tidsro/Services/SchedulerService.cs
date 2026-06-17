@@ -65,12 +65,29 @@ public sealed class SchedulerService
     public void Tick()
     {
         var now = _clock.Now;
+
         foreach (var item in _running.ToList())   // snapshot: handlers may mutate _running
         {
             if (item.State == TimerState.Running && item.EndsAt is { } end && now >= end)
             {
                 item.State = TimerState.Fired;     // guard: fire at most once
                 Fired?.Invoke(this, item);
+            }
+        }
+
+        foreach (var alarm in _alarms.ToList())
+        {
+            if (alarm.State != TimerState.Running || alarm.EndsAt is not { } end || now < end) continue;
+
+            _alarms.Remove(alarm);                 // one-shot leaves the armed set whether it fires or expires
+            if (now - end <= Grace)
+            {
+                alarm.State = TimerState.Fired;    // removal + Fired-state == durable single-fire across a tick gap
+                Fired?.Invoke(this, alarm);        // sound + corner card (App handler)
+            }
+            else
+            {
+                Expired?.Invoke(this, alarm);      // quiet missed-while-away note, no sound/card
             }
         }
     }
