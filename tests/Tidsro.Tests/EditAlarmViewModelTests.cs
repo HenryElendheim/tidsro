@@ -98,4 +98,15 @@ public class EditAlarmViewModelTests
         vm.SaveCommand.Execute(null);
         Assert.Equal(Weekdays.None, Assert.Single(applied).days);
     }
+
+    [Fact]
+    public void Constructed_from_a_custom_set_shows_custom_panel_and_round_trips_the_days()
+    {
+        var custom = Weekdays.Mon | Weekdays.Wed | Weekdays.Fri;
+        var vm = New("09:00", out var applied, out _, days: custom);
+        Assert.Equal(RepeatOption.Custom, vm.Repeat);
+        Assert.True(vm.ShowCustomDays);
+        vm.SaveCommand.Execute(null);
+        Assert.Equal(custom, Assert.Single(applied).days);   // pre-selected toggles round-trip through ResolveDays
+    }
 }
