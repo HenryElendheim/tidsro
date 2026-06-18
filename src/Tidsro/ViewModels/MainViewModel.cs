@@ -29,6 +29,16 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _alarmError;
     [ObservableProperty] private SoundChoice _alarmSound;
 
+    public RepeatOption[] RepeatOptions { get; } =
+        { RepeatOption.Once, RepeatOption.Daily, RepeatOption.Weekdays, RepeatOption.Weekends, RepeatOption.Custom };
+
+    [ObservableProperty] private RepeatOption _alarmRepeat = RepeatOption.Once;
+
+    public IReadOnlyList<DayToggleViewModel> AlarmDayToggles { get; } = DayToggleViewModel.Week();
+
+    public bool ShowCustomDays => AlarmRepeat == RepeatOption.Custom;
+    partial void OnAlarmRepeatChanged(RepeatOption value) => OnPropertyChanged(nameof(ShowCustomDays));
+
     [ObservableProperty] private string? _missedNote;
 
     // Snapshot of (id, fire-time) the agenda was last built from. A recurring alarm advances its
@@ -145,14 +155,28 @@ public partial class MainViewModel : ObservableObject
         AlarmError = null;
 
         var label = string.IsNullOrWhiteSpace(AlarmLabel) ? null : CapitalizeFirst(AlarmLabel.Trim());
-        var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-        _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
+        var days = ResolveDays();
+        if (days == Weekdays.None)
+        {
+            var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
+            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
+            Announce($"Alarm added for {fireAt:HH\\:mm}");
+        }
+        else
+        {
+            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound);
+            Announce($"Alarm added for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
+        }
 
         RebuildAgenda();
         ClearEditor();
         AlarmsChanged?.Invoke(this, EventArgs.Empty);
-        Announce($"Alarm added for {fireAt:HH\\:mm}");
     }
+
+    // Custom uses the picked toggles; every other option is a fixed preset (Once -> None -> one-shot).
+    private Weekdays ResolveDays() => AlarmRepeat == RepeatOption.Custom
+        ? AlarmDayToggles.Where(t => t.IsSelected).Aggregate(Weekdays.None, (acc, t) => acc | t.Flag)
+        : RecurrenceRules.DaysFor(AlarmRepeat, Weekdays.None);
 
     [RelayCommand]
     private void BeginEditAlarm(AlarmItemViewModel? row)
@@ -234,6 +258,8 @@ public partial class MainViewModel : ObservableObject
         AlarmTimeInput = "";
         AlarmLabel = "";
         AlarmError = null;
+        AlarmRepeat = RepeatOption.Once;
+        foreach (var t in AlarmDayToggles) t.IsSelected = false;
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);

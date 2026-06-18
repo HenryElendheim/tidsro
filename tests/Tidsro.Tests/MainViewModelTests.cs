@@ -618,4 +618,74 @@ public class MainViewModelTests
         Assert.True(vm.Alarms[0].IsNext);
         Assert.Equal("A", vm.Alarms[1].DisplayLabel);     // A (tomorrow) sorts after
     }
+
+    [Fact]
+    public void AddAlarm_with_a_weekdays_repeat_creates_a_recurring_alarm()
+    {
+        var vm = New(out _, out var sched);          // Thu 2026-01-01 09:00
+        vm.AlarmTimeInput = "07:00";
+        vm.AlarmLabel = "Stand-up";
+        vm.AlarmRepeat = RepeatOption.Weekdays;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal("Weekdays", row.CadenceText);
+        Assert.Equal(TriggerType.Recurring, row.Item.TriggerType);
+        var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
+        Assert.Equal(weekdays, row.Item.RecurringDays);
+        Assert.Equal(weekdays, Assert.Single(sched.Alarms).RecurringDays);
+    }
+
+    [Fact]
+    public void AddAlarm_with_a_custom_day_set_creates_a_recurring_alarm()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "08:00";
+        vm.AlarmRepeat = RepeatOption.Custom;
+        foreach (var t in vm.AlarmDayToggles)
+            t.IsSelected = t.Flag is Weekdays.Mon or Weekdays.Wed or Weekdays.Fri;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal("Mon Wed Fri", Assert.Single(vm.Alarms).CadenceText);
+    }
+
+    [Fact]
+    public void AddAlarm_with_once_still_creates_a_one_shot()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:30";
+        vm.AlarmRepeat = RepeatOption.Once;   // the default
+        vm.AddAlarmCommand.Execute(null);
+
+        var row = Assert.Single(vm.Alarms);
+        Assert.Equal(TriggerType.ClockTime, row.Item.TriggerType);
+        Assert.Null(row.Item.RecurringDays);
+    }
+
+    [Fact]
+    public void ShowCustomDays_tracks_the_repeat_choice()
+    {
+        var vm = New(out _, out _);
+        Assert.False(vm.ShowCustomDays);
+        vm.AlarmRepeat = RepeatOption.Custom;
+        Assert.True(vm.ShowCustomDays);
+        vm.AlarmRepeat = RepeatOption.Daily;
+        Assert.False(vm.ShowCustomDays);
+    }
+
+    [Fact]
+    public void AddAlarm_resets_the_repeat_editor_after_adding()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "07:00";
+        vm.AlarmRepeat = RepeatOption.Custom;
+        vm.AlarmDayToggles[0].IsSelected = true;
+
+        vm.AddAlarmCommand.Execute(null);
+
+        Assert.Equal(RepeatOption.Once, vm.AlarmRepeat);
+        Assert.All(vm.AlarmDayToggles, t => Assert.False(t.IsSelected));
+    }
 }
