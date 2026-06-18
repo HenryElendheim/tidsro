@@ -267,7 +267,7 @@ public class MainViewModelTests
         var originalId = vm.Alarms[0].Item.Id;
         var changed = 0; vm.AlarmsChanged += (_, _) => changed++;
 
-        vm.ApplyAlarmEdit(originalId, 11, 15, Weekdays.None, "coffee", SoundChoice.Marimba);
+        vm.ApplyAlarmEdit(originalId, 11, 15, Weekdays.None, "coffee", SoundChoice.Marimba, false);
 
         var row = Assert.Single(vm.Alarms);                // still one alarm, not a duplicate
         Assert.Single(sched.Alarms);                       // scheduler holds exactly one armed alarm
@@ -288,7 +288,7 @@ public class MainViewModelTests
         var id = vm.Alarms[0].Item.Id;
         string? announced = null; vm.Announcement += (_, m) => announced = m;
 
-        vm.ApplyAlarmEdit(id, 12, 45, Weekdays.None, null, SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 12, 45, Weekdays.None, null, SoundChoice.None, false);
 
         Assert.NotNull(announced);
         Assert.Contains("12:45", announced);
@@ -301,7 +301,7 @@ public class MainViewModelTests
         vm.AlarmTimeInput = "10:00"; vm.AlarmLabel = "Tea"; vm.AddAlarmCommand.Execute(null);
         var id = vm.Alarms[0].Item.Id;
 
-        vm.ApplyAlarmEdit(id, 11, 0, Weekdays.None, "   ", SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 11, 0, Weekdays.None, "   ", SoundChoice.None, false);
 
         Assert.Null(vm.Alarms[0].Item.Label);
     }
@@ -756,7 +756,7 @@ public class MainViewModelTests
         var id = vm.Alarms[0].Item.Id;
         var weekdays = Weekdays.Mon | Weekdays.Tue | Weekdays.Wed | Weekdays.Thu | Weekdays.Fri;
 
-        vm.ApplyAlarmEdit(id, 7, 0, weekdays, "Stand-up", SoundChoice.None);
+        vm.ApplyAlarmEdit(id, 7, 0, weekdays, "Stand-up", SoundChoice.None, false);
 
         var row = Assert.Single(vm.Alarms);
         Assert.Equal(id, row.Item.Id);                       // same identity
@@ -795,5 +795,17 @@ public class MainViewModelTests
         vm.CommitPendingDelete();
 
         Assert.Equal(1, committed);   // a committed recurring delete must reach disk
+    }
+
+    [Fact]
+    public void ApplyAlarmEdit_carries_the_warn_before_flag()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00"; vm.AddAlarmCommand.Execute(null);
+        var id = vm.Alarms[0].Item.Id;
+
+        vm.ApplyAlarmEdit(id, 11, 0, Weekdays.None, "Tea", SoundChoice.Bell, warnBefore: true);
+
+        Assert.True(vm.Alarms[0].Item.WarnBefore);
     }
 }

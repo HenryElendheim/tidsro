@@ -205,7 +205,7 @@ public partial class MainViewModel : ObservableObject
 
     // Called by the Edit-alarm dialog on Save. Replaces the alarm in place (same Id), normalizing the
     // label like the add path. Mirrors the former in-place edit branch.
-    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound)
+    public void ApplyAlarmEdit(Guid id, int hour, int minute, Weekdays days, string? label, SoundChoice sound, bool warnBefore)
     {
         var existing = _scheduler.Alarms.FirstOrDefault(a => a.Id == id);
         if (existing is not null) _scheduler.RemoveAlarm(existing);
@@ -213,12 +213,12 @@ public partial class MainViewModel : ObservableObject
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, clean, sound, id);
+            _scheduler.ArmClockAlarm(fireAt, clean, sound, id, warnBefore);
             Announce($"Alarm updated for {fireAt:HH\\:mm}");
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id);
+            _scheduler.ArmRecurringAlarm(hour, minute, days, clean, sound, id, warnBefore: warnBefore);
             Announce($"Alarm updated for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
         RebuildAgenda();
