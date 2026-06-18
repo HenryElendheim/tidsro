@@ -129,7 +129,7 @@ public partial class App : Application
     {
         var now = _scheduler.Now;
         foreach (var (popup, fireAt) in _warningFireTimes.ToList())
-            if (now >= fireAt) popup.Close();   // Closed handler removes it from both collections and restacks
+            if (now >= fireAt && popup.IsLoaded) popup.Close();   // IsLoaded: never re-close a window already closing
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
