@@ -527,6 +527,45 @@ public class MainViewModelTests
         Assert.False(vm.HasPendingDelete);
     }
 
+    // ── Quick-timer "next" highlight: the soonest active timer is flagged ──
+
+    [Fact]
+    public void The_soonest_finishing_running_timer_is_marked_next()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(60);   // Running[0] — finishes later
+        vm.StartPresetCommand.Execute(15);   // Running[1] — finishes first
+
+        Assert.False(vm.Running[0].IsNext);
+        Assert.True(vm.Running[1].IsNext);
+    }
+
+    [Fact]
+    public void Cancelling_the_next_timer_moves_the_highlight_to_the_remaining_timer()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(60);
+        vm.StartPresetCommand.Execute(15);
+
+        vm.CancelTimerCommand.Execute(vm.Running[1]);    // cancel the soonest (15)
+
+        Assert.True(Assert.Single(vm.Running).IsNext);   // the 60 is now next
+    }
+
+    [Fact]
+    public void A_paused_timer_is_not_marked_next_while_an_active_timer_runs()
+    {
+        var vm = New(out _, out _);
+        vm.StartPresetCommand.Execute(15);   // Running[0] — soonest, but about to pause
+        vm.StartPresetCommand.Execute(60);   // Running[1] — keeps running
+
+        vm.Running[0].PauseResumeCommand.Execute(null);   // pause the 15
+        vm.RefreshAll();                                   // "next" is re-evaluated on the tick
+
+        Assert.False(vm.Running[0].IsNext);   // paused — it won't fire next
+        Assert.True(vm.Running[1].IsNext);    // the active timer is next
+    }
+
     // ── Label auto-capitalization ─────────────────────────────────────────
 
     [Fact]
@@ -563,6 +602,26 @@ public class MainViewModelTests
         vm.CustomInput = "5:00"; vm.Label = "";
         vm.StartCustomCommand.Execute(null);
         Assert.Null(vm.Running[0].Label);
+    }
+
+    // ── Label clears after starting, so it can't carry into the next timer ──
+
+    [Fact]
+    public void StartPreset_clears_the_label_after_starting()
+    {
+        var vm = New(out _, out _);
+        vm.Label = "Tea";
+        vm.StartPresetCommand.Execute(15);
+        Assert.Equal("", vm.Label);
+    }
+
+    [Fact]
+    public void StartCustom_clears_the_label_after_starting()
+    {
+        var vm = New(out _, out _);
+        vm.CustomInput = "5:00"; vm.Label = "Tea";
+        vm.StartCustomCommand.Execute(null);
+        Assert.Equal("", vm.Label);
     }
 
     [Fact]

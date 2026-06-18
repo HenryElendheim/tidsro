@@ -94,7 +94,7 @@ public partial class MainViewModel : ObservableObject
         { CustomError = error; return; }
         CustomError = null;
         Add(d);
-        CustomInput = ""; Label = "";
+        CustomInput = "";
     }
 
     private void Add(TimeSpan duration)
@@ -102,10 +102,24 @@ public partial class MainViewModel : ObservableObject
         var label = string.IsNullOrWhiteSpace(Label) ? null : CapitalizeFirst(Label.Trim());
         var item = _scheduler.StartCountdown(duration, label, SelectedSound);
         Running.Add(new TimerItemViewModel(item, _scheduler));
+        Label = "";   // consumed by this timer — clear so it can't carry into the next one (preset or custom)
+        MarkNextRunning();
     }
 
     private static string CapitalizeFirst(string s) =>
         s.Length == 0 ? s : char.ToUpper(s[0]) + s[1..];
+
+    // Flag the active timer that will reach zero soonest, so the View highlights it like the agenda's
+    // "next" alarm. Only Running timers qualify — a paused or already-fired countdown isn't what fires next.
+    private void MarkNextRunning()
+    {
+        var next = Running
+            .Where(vm => vm.Item.State == TimerState.Running)
+            .OrderBy(vm => _scheduler.Remaining(vm.Item))
+            .FirstOrDefault();
+        foreach (var vm in Running)
+            vm.IsNext = ReferenceEquals(vm, next);
+    }
 
     [RelayCommand]
     private void CancelTimer(TimerItemViewModel? row)
@@ -116,6 +130,7 @@ public partial class MainViewModel : ObservableObject
         var remaining = _scheduler.Remaining(item);  // capture BEFORE cancelling
         _scheduler.Cancel(item);
         Running.Remove(row);                         // instant removal — no 1s tick lag
+        MarkNextRunning();                           // highlight jumps to the new soonest at once
         _pendingDelete = item;
         _pendingDeleteRemaining = remaining;
         PendingDeleteLabel = $"Timer cancelled{(string.IsNullOrEmpty(item.Label) ? "" : $" · {item.Label}")}";
@@ -138,6 +153,8 @@ public partial class MainViewModel : ObservableObject
         foreach (var item in _scheduler.Running)
             if (!Running.Any(vm => vm.Item == item))
                 Running.Add(new TimerItemViewModel(item, _scheduler));
+
+        MarkNextRunning();   // keep the "next" highlight current as timers count down, pause, or fire
 
         // Reconcile the alarm agenda only when it actually changed — an add/remove/one-shot fire (ids)
         // or a recurring roll-forward (EndsAt). Otherwise leave the collection alone so focus and
@@ -234,6 +251,7 @@ public partial class MainViewModel : ObservableObject
         {
             var restored = _scheduler.StartCountdown(_pendingDeleteRemaining ?? TimeSpan.Zero, item.Label, item.Sound);
             Running.Add(new TimerItemViewModel(restored, _scheduler));
+            MarkNextRunning();
             Announce("Timer restored");
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)

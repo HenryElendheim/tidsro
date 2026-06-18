@@ -71,8 +71,18 @@
         <ItemsControl ItemsSource="{Binding Running}" Margin="0,12,0,0">
           <ItemsControl.ItemTemplate>
             <DataTemplate>
-              <Border Background="{StaticResource CardBg}" BorderBrush="{StaticResource Border}" BorderThickness="1"
+              <Border Background="{StaticResource CardBg}" BorderThickness="1"
                       CornerRadius="{StaticResource RadiusMd}" Padding="16" Margin="0,0,0,12">
+                <Border.Style>
+                  <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="{StaticResource Border}"/>
+                    <Style.Triggers>
+                      <DataTrigger Binding="{Binding IsNext}" Value="True">
+                        <Setter Property="BorderBrush" Value="{StaticResource Accent}"/>
+                      </DataTrigger>
+                    </Style.Triggers>
+                  </Style>
+                </Border.Style>
                 <Border.Triggers>
                   <EventTrigger RoutedEvent="Loaded">
                     <BeginStoryboard><Storyboard>
