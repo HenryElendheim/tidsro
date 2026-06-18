@@ -41,6 +41,7 @@ The road is already paved: the scheduler raises `Fired` and `Expired` events on 
 6. **Dedup via a transient `WarningSent` flag, reset on roll-forward** — mirroring how recurring fires dedup by advancing `EndsAt`. Not persisted: a heads-up is ephemeral.
 7. **Two calm guards.** An alarm armed *less than* five minutes before its time does **not** insta-warn; an app asleep through the warning window surfaces the existing quiet "missed" note (if the alarm itself was missed), never a stale heads-up.
 8. **Reuse the corner card as a heads-up variant.** Same window, same calm placement/stacking; Snooze/Restart hidden; Dismiss is **close-only** (the alarm stays armed and still fires). Because Dismiss never mutates the alarm, the warning can carry the *live* alarm — no transient-copy guard is needed (unlike the recurring completion card).
+9. **The heads-up auto-closes at fire.** If not dismissed first, the warning card closes the moment its alarm fires — replaced by the completion card. The app tracks each open warning card with the occurrence's fire time (captured when the warning is raised) and closes it on the tick that reaches that time. This is decoupled from the `Fired` event, so it behaves identically for one-shot and recurring alarms, and a recurring roll-forward never strands a card.
 
 ---
 
@@ -73,7 +74,7 @@ A `Warning` raises the **same bottom-right card** as a completion, in a heads-up
 - **Sound:** the App handler plays `SoftChime` **iff** the alarm's own sound is not `None`; a silent alarm gets a silent card.
 - **Placement / motion / focus:** identical to the completion card — bottom-right, stacked, no focus steal, fade/slide honouring reduced-motion, the keyboard route + UIA announcement.
 
-The warning card and the later completion card are independent. By default the warning card persists until dismissed (same lifecycle as the completion card); whether it should auto-close the moment its alarm fires is left to manual acceptance (§11).
+The warning card **auto-closes the moment its alarm fires** — the heads-up gives way to the completion card — unless dismissed first. The app captures the occurrence's fire time when the warning is raised and closes the card on the tick that reaches it, so a recurring alarm advancing its `EndsAt` never strands a stale card (§6).
 
 ### 3.4 Missed-while-away & edges
 
@@ -118,7 +119,7 @@ RecurringAlarmRecord { … existing …  bool WarnBefore; }
 - `Views/CompletionPopup.xaml(.cs)` — bind Snooze/Restart visibility to `ShowSnooze` / `ShowRestart`; announce `AnnouncementText` instead of the hard-coded "complete".
 - `Views/MainWindow.xaml` — the "Warn me 5 minutes before" checkbox in the add-editor; the agenda row's warning cue.
 - `Views/EditAlarmWindow.xaml` — the same checkbox in the modal dialog.
-- `App.xaml.cs` — subscribe `Warning`; the handler plays `SoftChime` when `item.Sound != None` and shows a heads-up card in the existing corner stack; `ToRecord` / `ToRecurringRecord` write `WarnBefore`; `ArmLoadedAlarms` / `ArmLoadedRecurring` and the Edit-dialog factory pass it through.
+- `App.xaml.cs` — subscribe `Warning`; the handler plays `SoftChime` when `item.Sound != None` and shows a heads-up card in the existing corner stack, **tracked with the occurrence's fire time (`item.EndsAt`, captured now)**; the existing 250 ms tick handler **closes any tracked warning card whose captured fire time has arrived**, so the heads-up gives way to the completion card; `ToRecord` / `ToRecurringRecord` write `WarnBefore`; `ArmLoadedAlarms` / `ArmLoadedRecurring` and the Edit-dialog factory pass it through.
 
 ---
 
@@ -130,6 +131,7 @@ RecurringAlarmRecord { … existing …  bool WarnBefore; }
 - **Close-only Dismiss:** dismissing the heads-up never disarms the alarm; the alarm still fires at its time (this is why the warning can safely carry the live recurring alarm with no transient copy).
 - **Late arm / relaunch inside the window:** suppressed via the `WarningSent` initial value — a calm "no surprise card on launch / on last-minute set" rule.
 - **DST / time zones:** the warning is derived from the same local-wall-clock `EndsAt` as the alarm, so it inherits the recurring slice's DST behaviour with nothing new.
+- **Heads-up lifecycle:** the warning card closes the moment its occurrence's fire time arrives (replaced by the completion card) or on earlier dismiss; the fire time is captured when the warning is raised, so a recurring roll-forward never strands it.
 
 ---
 
@@ -164,7 +166,7 @@ Unit tests (`dotnet test`):
 - `MainViewModel`: `AddAlarm` with the toggle on arms an alarm whose `WarnBefore` is true; `ClearEditor` resets `AlarmWarnBefore`; `ApplyAlarmEdit` carries `WarnBefore` through an edit; the agenda row exposes the warning cue and includes it in `AccessibleName`.
 - `PersistenceService` / `TidsroData`: `WarnBefore` round-trips for both record types; a record saved **without** the field loads as `false` (back-compat); sanitisation leaves the boolean untouched.
 
-Manual acceptance (with a screen reader for the a11y items): enable the toggle on a one-shot and on a recurring alarm; confirm the heads-up card appears five minutes before with a soft chime for a sounded alarm and silently for a silent one; Dismiss closes the card and the alarm **still fires** five minutes later; a last-minute alarm gives no insta-warn; a relaunch inside the window gives no stale card; the editor checkbox + agenda cue legibility, keyboard path, and UIA announcements.
+Manual acceptance (with a screen reader for the a11y items): enable the toggle on a one-shot and on a recurring alarm; confirm the heads-up card appears five minutes before with a soft chime for a sounded alarm and silently for a silent one; Dismiss closes the card and the alarm **still fires** five minutes later; a heads-up left undismissed **closes itself when the alarm fires**, replaced by the completion card; a last-minute alarm gives no insta-warn; a relaunch inside the window gives no stale card; the editor checkbox + agenda cue legibility, keyboard path, and UIA announcements.
 
 ---
 
@@ -177,7 +179,6 @@ Manual acceptance (with a screen reader for the a11y items): enable the toggle o
 
 ## 11. Open decisions
 
-None blocking. Items deliberately left to implementation / manual acceptance, following the slice's established values:
-- **Warning-card lifecycle:** default is "persists until dismissed" (reusing the completion card's lifecycle). If a warning card lingering beside the later completion card feels cluttered in acceptance, auto-closing it when its alarm fires is the fallback — kept out of the first cut to avoid coupling the card to the fire path.
+None blocking. The warning-card lifecycle is now **decided** — it auto-closes when its alarm fires, or on earlier dismiss (§2 #9, §3.3). Items deliberately left to implementation / manual acceptance, following the slice's established values:
 - **Editor control treatment:** a labelled checkbox is specified for clarity and accessibility; its exact visual fit beside the Sound/Repeat rows (checkbox vs. a single toggle-chip) is a manual-acceptance polish call.
 - **Agenda cue wording/placement:** "5-min warning" text vs. a small glyph-plus-text, tuned for legibility during acceptance.
