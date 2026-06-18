@@ -102,7 +102,7 @@ public partial class App : Application
         PositionPopup(popup, _openPopups.Count - 1);
         popup.Show();   // ShowActivated=false -> appears without stealing focus
 
-        if (item.TriggerType == TriggerType.ClockTime) SaveData();   // the one-shot left the armed set; mirror to disk
+        if (item.TriggerType == TriggerType.ClockTime) SaveData();   // a one-shot left the armed set, or a recurring fire advanced its next occurrence — mirror to disk
     }
 
     private void PositionPopup(CompletionPopup popup, int indexFromBottom)
