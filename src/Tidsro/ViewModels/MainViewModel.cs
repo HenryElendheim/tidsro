@@ -33,6 +33,7 @@ public partial class MainViewModel : ObservableObject
         { RepeatOption.Once, RepeatOption.Daily, RepeatOption.Weekdays, RepeatOption.Weekends, RepeatOption.Custom };
 
     [ObservableProperty] private RepeatOption _alarmRepeat = RepeatOption.Once;
+    [ObservableProperty] private bool _alarmWarnBefore;
 
     public IReadOnlyList<DayToggleViewModel> AlarmDayToggles { get; } = DayToggleViewModel.Week();
 
@@ -176,12 +177,12 @@ public partial class MainViewModel : ObservableObject
         if (days == Weekdays.None)
         {
             var fireAt = ClockTimeRules.ComputeFireAt(_scheduler.Now, hour, minute);
-            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound);
+            _scheduler.ArmClockAlarm(fireAt, label, AlarmSound, warnBefore: AlarmWarnBefore);
             Announce($"Alarm added for {fireAt:HH\\:mm}");
         }
         else
         {
-            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound);
+            _scheduler.ArmRecurringAlarm(hour, minute, days, label, AlarmSound, warnBefore: AlarmWarnBefore);
             Announce($"Alarm added for {hour:00}:{minute:00}, {RecurrenceRules.CadenceLabel(days)}");
         }
 
@@ -293,6 +294,7 @@ public partial class MainViewModel : ObservableObject
         AlarmError = null;
         AlarmRepeat = RepeatOption.Once;
         foreach (var t in AlarmDayToggles) t.IsSelected = false;
+        AlarmWarnBefore = false;
     }
 
     private void Announce(string message) => Announcement?.Invoke(this, message);

@@ -808,4 +808,24 @@ public class MainViewModelTests
 
         Assert.True(vm.Alarms[0].Item.WarnBefore);
     }
+
+    [Fact]
+    public void AddAlarm_with_warning_on_arms_an_alarm_that_warns_before()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00";
+        vm.AlarmWarnBefore = true;
+        vm.AddAlarmCommand.Execute(null);
+        Assert.True(vm.Alarms[0].Item.WarnBefore);
+    }
+
+    [Fact]
+    public void AddAlarm_resets_the_warning_toggle_after_adding()
+    {
+        var vm = New(out _, out _);
+        vm.AlarmTimeInput = "10:00";
+        vm.AlarmWarnBefore = true;
+        vm.AddAlarmCommand.Execute(null);
+        Assert.False(vm.AlarmWarnBefore);   // editor cleared, like the rest
+    }
 }
