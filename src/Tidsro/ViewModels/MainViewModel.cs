@@ -15,7 +15,8 @@ public partial class MainViewModel : ObservableObject
     public int[] Presets { get; } = { 15, 30, 60 };
 
     public SoundChoice[] SoundOptions { get; } =
-        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell };
+        { SoundChoice.None, SoundChoice.SoftChime, SoundChoice.Marimba, SoundChoice.Bell,
+          SoundChoice.PianoJingle, SoundChoice.ElectricPianoJingle, SoundChoice.BellJingle };
 
     [ObservableProperty] private string _customInput = "";
     [ObservableProperty] private string _label = "";
