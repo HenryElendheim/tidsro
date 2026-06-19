@@ -71,6 +71,23 @@ public class SchedulerServiceTests
     }
 
     [Fact]
+    public void Snooze_on_an_alarm_returns_it_to_the_schedule_not_quick_timers()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), "Lunch", SoundChoice.Bell);
+        c.Advance(TimeSpan.FromMinutes(2)); s.Tick();        // fires + leaves the armed set (one-shot)
+
+        var snoozed = s.Snooze(alarm, TimeSpan.FromMinutes(5));
+
+        Assert.Equal(TriggerType.ClockTime, snoozed.TriggerType);   // re-armed as an alarm, not a countdown
+        Assert.Contains(snoozed, s.Alarms);                          // shows in the Schedule
+        Assert.Empty(s.Running);                                     // not parked in Quick timers
+        Assert.Equal("Lunch", snoozed.Label);
+        Assert.Equal(SoundChoice.Bell, snoozed.Sound);
+        Assert.Equal(c.Now + TimeSpan.FromMinutes(5), snoozed.EndsAt);
+    }
+
+    [Fact]
     public void Cancel_removes_the_item()
     {
         var (s, _) = New();

@@ -175,7 +175,10 @@ public sealed class SchedulerService
     public TimerItem Snooze(TimerItem item, TimeSpan by)
     {
         Cancel(item);
-        return StartCountdown(by, item.Label, item.Sound);
+        // An alarm snoozes back into the Schedule as a clock-time alarm; a countdown stays a Quick timer.
+        return item.TriggerType == TriggerType.Countdown
+            ? StartCountdown(by, item.Label, item.Sound)
+            : ArmClockAlarm(_clock.Now + by, item.Label, item.Sound);
     }
 
     public TimerItem Restart(TimerItem item)
