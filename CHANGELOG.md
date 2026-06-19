@@ -2,7 +2,12 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
-## [1.3.0] — Unreleased
+## [1.3.1] — 2026-06-19
+
+### Fixed
+- **Piano jingle and Electric piano jingle played the same sound** — the audio lookup matched the wrong embedded file, so both used the electric piano clip. Each sound now plays its own clip.
+
+## [1.3.0] — 2026-06-19
 
 ### Added
 - **Recurring alarms** — repeat an alarm on a weekday set (Daily, Weekdays, Weekends, or custom days), shown in one **Schedule** sorted by next occurrence.
@@ -22,7 +27,8 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
-[1.3.0]: https://github.com/malinfossum/tidsro/releases
+[1.3.1]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.1
+[1.3.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.0
 [1.2.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.2.0
 [1.1.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.1.0
 [1.0.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.0.0
