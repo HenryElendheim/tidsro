@@ -308,4 +308,42 @@
       </Setter.Value>
     </Setter>
   </Style>
+
+  <!-- Toggle switch for boolean settings (warn-before, launch-at-startup). Restyles CheckBox so the
+       IsChecked binding and screen-reader checked/unchecked semantics carry over unchanged. State reads
+       from thumb POSITION (not colour alone); gold-when-on echoes the primary action. -->
+  <Style x:Key="ToggleSwitch" TargetType="CheckBox">
+    <Setter Property="FocusVisualStyle" Value="{StaticResource ActionFocusVisual}"/>
+    <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    <Setter Property="FontSize" Value="{StaticResource TextSm}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="Template">
+      <Setter.Value>
+        <ControlTemplate TargetType="CheckBox">
+          <StackPanel Orientation="Horizontal" Background="Transparent">
+            <Border x:Name="track" Width="42" Height="24" CornerRadius="12" VerticalAlignment="Center"
+                    Background="{StaticResource InteractiveBg}" BorderBrush="{StaticResource Border}" BorderThickness="1">
+              <Ellipse x:Name="thumb" Width="16" Height="16" HorizontalAlignment="Left" VerticalAlignment="Center"
+                       Margin="3,0,0,0" Fill="{StaticResource TextMuted}"/>
+            </Border>
+            <ContentPresenter VerticalAlignment="Center" Margin="10,0,0,0"
+                              TextElement.Foreground="{TemplateBinding Foreground}"/>
+          </StackPanel>
+          <ControlTemplate.Triggers>
+            <Trigger Property="IsChecked" Value="True">
+              <Setter TargetName="track" Property="Background" Value="{StaticResource Accent}"/>
+              <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource Accent}"/>
+              <Setter TargetName="thumb" Property="Fill" Value="{StaticResource PageBg}"/>
+              <Setter TargetName="thumb" Property="HorizontalAlignment" Value="Right"/>
+              <Setter TargetName="thumb" Property="Margin" Value="0,0,3,0"/>
+            </Trigger>
+            <Trigger Property="IsMouseOver" Value="True">
+              <Setter TargetName="track" Property="BorderBrush" Value="{StaticResource AccentStrong}"/>
+            </Trigger>
+          </ControlTemplate.Triggers>
+        </ControlTemplate>
+      </Setter.Value>
+    </Setter>
+  </Style>
 </ResourceDictionary>
