@@ -16,7 +16,7 @@ Anyone who works or studies at a computer and wants to hold their focus through 
 
 ## Status
 
-**v1.3.1 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms are edited in a dialog and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
+**v1.3.2 is released** — see the [Releases page](https://github.com/malinfossum/tidsro/releases). Tidsro does **countdown timers** (presets or custom, with pause/resume, reset, an optional label, and a per-timer sound) and a **Schedule** of **clock-time and recurring alarms** — fire once at an HH:MM time, or repeat on a weekday set (Daily, Weekdays, Weekends, or custom days). Each alarm takes an optional label, a per-alarm sound, and an optional **5-minute pre-alarm warning**; the Schedule is sorted by next occurrence, alarms are edited in a dialog and deleted with an undo window, and firing survives sleep and app-relaunch within a 5-minute grace. Settings (launch-at-startup, default sound) apply on **Save**.
 
 See the [changelog](CHANGELOG.md) for what's new in each release.
 
@@ -40,7 +40,7 @@ Launching Tidsro opens its window — it remembers where you last placed it and 
 
 - Pick a preset (5 / 30 / 60 min) or type a custom duration: `25` (minutes), `5:00` (mm:ss), or `1:30:00` (h:mm:ss) — with an optional **label** to tell timers apart. Invalid input shows a calm inline message.
 - Choose a **sound** for the next timer from the dropdown — **▶** previews it. It starts from your default sound and applies to both presets and custom timers.
-- Multiple countdowns can run at once; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel — cancelling drops a brief **Undo** bar at the bottom. Paused timers dim; resetting while paused keeps the timer stopped at the start.
+- Multiple countdowns can run at once, stacked soonest-first; each shows a live mm:ss (or h:mm:ss) countdown with **pause/resume, reset** (back to the full duration), and cancel — cancelling drops a brief **Undo** bar at the bottom. Paused timers dim and drop below the active ones; resetting while paused keeps the timer stopped at the start.
 - When a timer finishes, a calm card appears in the bottom-right corner. It does not steal focus.
   - **+5** arms a new 5-minute countdown. **Restart** re-runs the original duration. **Dismiss** closes the card.
   - Press **Ctrl+Alt+T** to bring the latest card into keyboard focus; Tab reaches the buttons; Enter activates; focus returns to your previous app on dismiss.
