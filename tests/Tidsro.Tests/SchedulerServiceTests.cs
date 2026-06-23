@@ -444,4 +444,30 @@ public class SchedulerServiceTests
         s.Tick();
         Assert.Equal(2, warned);               // warned again for the next occurrence
     }
+
+    [Fact]
+    public void Armed_alarms_are_enabled_by_default()
+    {
+        var (s, c) = New();
+        var clock = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None);
+        var rec = s.ArmRecurringAlarm(7, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        Assert.True(clock.IsEnabled);
+        Assert.True(rec.IsEnabled);
+    }
+
+    [Fact]
+    public void ArmClockAlarm_can_create_a_disabled_alarm()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None, enabled: false);
+        Assert.False(alarm.IsEnabled);
+    }
+
+    [Fact]
+    public void ArmRecurringAlarm_can_create_a_disabled_alarm()
+    {
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(7, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        Assert.False(alarm.IsEnabled);
+    }
 }

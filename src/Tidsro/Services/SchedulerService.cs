@@ -27,7 +27,7 @@ public sealed class SchedulerService
     public event EventHandler<TimerItem>? Warning;
 
     /// <summary>Arm a one-shot clock-time alarm. Pass <paramref name="id"/> to restore a persisted alarm's identity.</summary>
-    public TimerItem ArmClockAlarm(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid? id = null, bool warnBefore = false)
+    public TimerItem ArmClockAlarm(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid? id = null, bool warnBefore = false, bool enabled = true)
     {
         var item = new TimerItem
         {
@@ -39,6 +39,7 @@ public sealed class SchedulerService
             State = TimerState.Running,
             WarnBefore = warnBefore,
             WarningSent = warnBefore && _clock.Now >= fireAt - WarningLead,   // armed inside the window -> no insta-warn
+            IsEnabled = enabled,
         };
         _alarms.Add(item);
         return item;
@@ -48,7 +49,7 @@ public sealed class SchedulerService
 
     /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
     public TimerItem ArmRecurringAlarm(int hour, int minute, Weekdays days, string? label, SoundChoice sound,
-        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false)
+        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true)
     {
         var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days);
         var item = new TimerItem
@@ -62,6 +63,7 @@ public sealed class SchedulerService
             State = TimerState.Running,
             WarnBefore = warnBefore,
             WarningSent = warnBefore && _clock.Now >= ends - WarningLead,
+            IsEnabled = enabled,
         };
         _alarms.Add(item);
         return item;
