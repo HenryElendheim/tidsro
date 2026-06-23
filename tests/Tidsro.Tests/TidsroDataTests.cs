@@ -19,7 +19,7 @@ public class TidsroDataTests
         var data = new TidsroData { Settings = null, Alarms = { Good() } };
         var clean = data.Sanitized();
         Assert.NotNull(clean.Settings);                 // null settings -> defaults
-        Assert.Equal(3, clean.SchemaVersion);
+        Assert.Equal(4, clean.SchemaVersion);
         Assert.Single(clean.Alarms);
     }
 
@@ -140,5 +140,28 @@ public class TidsroDataTests
         var r = GoodRec(); r.WarnBefore = true;
         var clean = new TidsroData { Settings = new(), RecurringAlarms = { r } }.Sanitized();
         Assert.True(Assert.Single(clean.RecurringAlarms).WarnBefore);
+    }
+
+    [Fact]
+    public void A_record_is_enabled_by_default()
+    {
+        Assert.True(Good().Enabled);
+        Assert.True(GoodRec().Enabled);
+    }
+
+    [Fact]
+    public void Sanitized_preserves_the_enabled_flag_on_a_clock_alarm()
+    {
+        var a = Good(); a.Enabled = false;
+        var clean = new TidsroData { Settings = new(), Alarms = { a } }.Sanitized();
+        Assert.False(Assert.Single(clean.Alarms).Enabled);
+    }
+
+    [Fact]
+    public void Sanitized_preserves_the_enabled_flag_on_a_recurring_alarm()
+    {
+        var r = GoodRec(); r.Enabled = false;
+        var clean = new TidsroData { Settings = new(), RecurringAlarms = { r } }.Sanitized();
+        Assert.False(Assert.Single(clean.RecurringAlarms).Enabled);
     }
 }

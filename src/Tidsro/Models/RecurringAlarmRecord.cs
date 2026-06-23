@@ -11,4 +11,5 @@ public sealed class RecurringAlarmRecord
     public SoundChoice Sound { get; set; } = SoundChoice.None;
     public DateTime NextFireAt { get; set; } // local; the next occurrence — the durable dedup marker
     public bool WarnBefore { get; set; }
+    public bool Enabled { get; set; } = true;
 }
