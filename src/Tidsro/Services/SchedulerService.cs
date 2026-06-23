@@ -47,6 +47,24 @@ public sealed class SchedulerService
 
     public void RemoveAlarm(TimerItem item) => _alarms.Remove(item);
 
+    /// <summary>Turn an alarm on or off. Re-enabling a recurring alarm whose next occurrence has
+    /// already passed (e.g. switched off over the summer) rolls it forward to the next future one,
+    /// so it never fires the instant it comes back, and never emits a stale missed note.</summary>
+    public void SetEnabled(TimerItem alarm, bool enabled)
+    {
+        alarm.IsEnabled = enabled;
+        if (enabled
+            && alarm.TriggerType == TriggerType.Recurring
+            && alarm.RecurringDays is { } days
+            && alarm.EndsAt is { } end
+            && end <= _clock.Now)
+        {
+            var next = RecurrenceRules.NextOccurrence(_clock.Now, end.Hour, end.Minute, days);
+            alarm.EndsAt = next;
+            alarm.WarningSent = alarm.WarnBefore && _clock.Now >= next - WarningLead;
+        }
+    }
+
     /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
     public TimerItem ArmRecurringAlarm(int hour, int minute, Weekdays days, string? label, SoundChoice sound,
         Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true)

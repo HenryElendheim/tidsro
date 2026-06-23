@@ -512,4 +512,50 @@ public class SchedulerServiceTests
         Assert.Equal(0, fired);
         Assert.Equal(frozen, alarm.EndsAt);    // not advanced while off
     }
+
+    [Fact]
+    public void SetEnabled_false_turns_an_alarm_off()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None);
+        s.SetEnabled(alarm, false);
+        Assert.False(alarm.IsEnabled);
+    }
+
+    [Fact]
+    public void SetEnabled_true_rolls_a_past_recurring_alarm_forward_without_firing()
+    {
+        var (s, c) = New();   // Thu 2026-01-01 09:00
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromDays(1));   // Fri 09:00 — its frozen Thu-10:00 occurrence is now in the past
+        s.SetEnabled(alarm, true);
+
+        Assert.True(alarm.IsEnabled);
+        Assert.Equal(0, fired);            // re-enabling never fires
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // rolled to Fri 10:00
+
+        s.Tick();
+        Assert.Equal(0, fired);            // and the next tick doesn't retro-fire
+    }
+
+    [Fact]
+    public void SetEnabled_true_leaves_a_still_future_recurring_alarm_unchanged()
+    {
+        var (s, _) = New();   // Thu 09:00; EndsAt today 10:00 is still ahead
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        s.SetEnabled(alarm, true);
+        Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // unchanged
+    }
+
+    [Fact]
+    public void SetEnabled_true_does_not_roll_a_one_shot_forward()
+    {
+        var (s, c) = New();
+        var fireAt = c.Now + TimeSpan.FromHours(2);
+        var alarm = s.ArmClockAlarm(fireAt, null, SoundChoice.None, enabled: false);
+        s.SetEnabled(alarm, true);
+        Assert.Equal(fireAt, alarm.EndsAt);   // one-shots have no recurrence to roll
+    }
 }
