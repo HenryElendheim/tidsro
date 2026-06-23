@@ -2,6 +2,13 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [1.4.0] — 2026-06-23
+
+### Added
+- Per-alarm on/off toggle in the Schedule. Switch an alarm off to keep it without it firing or
+  warning — useful for silencing recurring alarms over a break — and back on when you need it.
+  Disabled alarms are kept across restarts and parked, muted, at the bottom of the list.
+
 ## [1.3.2] — 2026-06-22
 
 ### Changed
@@ -32,6 +39,7 @@ Clock-time alarms — a "Your day" agenda with one-shot fire-at-HH:MM alarms, op
 ## [1.0.0] — 2026-06-16
 First release — countdown timers with presets or custom durations, pause/resume, reset, and per-timer sounds.
 
+[1.4.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.4.0
 [1.3.2]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.2
 [1.3.1]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.1
 [1.3.0]: https://github.com/malinfossum/tidsro/releases/tag/v1.3.0

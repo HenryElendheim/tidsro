@@ -1,9 +1,9 @@
 namespace Tidsro.Models;
 
-/// <summary>Root persistence document (schema v2): app settings plus the saved alarms.</summary>
+/// <summary>Root persistence document: app settings plus the saved alarms. Current version is <see cref="CurrentSchema"/>.</summary>
 public sealed class TidsroData
 {
-    public const int CurrentSchema = 3;
+    public const int CurrentSchema = 4;
     private const int MaxLabel = 200;
 
     public int SchemaVersion { get; set; } = CurrentSchema;
@@ -36,6 +36,7 @@ public sealed class TidsroData
                 Label = NormaliseLabel(a.Label),
                 Sound = a.Sound,
                 WarnBefore = a.WarnBefore,
+                Enabled = a.Enabled,
             });
         }
 
@@ -61,6 +62,7 @@ public sealed class TidsroData
                 Sound = r.Sound,
                 NextFireAt = r.NextFireAt,
                 WarnBefore = r.WarnBefore,
+                Enabled = r.Enabled,
             });
         }
 

@@ -242,10 +242,25 @@
                           Command="{Binding DataContext.BeginEditAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
                           CommandParameter="{Binding}" FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
                           AutomationProperties.Name="{Binding EditLabel}" ToolTip="{Binding EditLabel}" Style="{StaticResource QuietAction}" Margin="0,0,8,0"/>
+                  <CheckBox DockPanel.Dock="Right" Style="{StaticResource ToggleSwitch}"
+                            IsChecked="{Binding IsEnabled, Mode=OneWay}"
+                            Command="{Binding DataContext.ToggleAlarmCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                            CommandParameter="{Binding}"
+                            VerticalAlignment="Center" Margin="0,0,10,0"
+                            AutomationProperties.Name="{Binding ToggleLabel}"/>
                   <StackPanel Orientation="Horizontal">
                     <Ellipse Width="9" Height="9" Margin="0,2,12,0" VerticalAlignment="Top" Fill="{StaticResource Accent}"
                              Visibility="{Binding IsNext, Converter={StaticResource BoolToVisible}}"/>
                     <StackPanel>
+                      <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                          <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsEnabled}" Value="False">
+                              <Setter Property="Opacity" Value="0.45"/>
+                            </DataTrigger>
+                          </Style.Triggers>
+                        </Style>
+                      </StackPanel.Style>
                       <StackPanel Orientation="Horizontal">
                         <TextBlock Text="{Binding TimeText}" FontFamily="{StaticResource FontMono}" FontSize="{StaticResource TextLg}" Foreground="{StaticResource Text}"/>
                         <TextBlock Text="{Binding CadenceText}" Foreground="{StaticResource TextFaint}" FontSize="{StaticResource TextXs}" VerticalAlignment="Center" Margin="8,0,0,0"/>

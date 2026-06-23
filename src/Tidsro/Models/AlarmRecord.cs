@@ -8,4 +8,5 @@ public sealed class AlarmRecord
     public string? Label { get; set; }
     public SoundChoice Sound { get; set; } = SoundChoice.None;
     public bool WarnBefore { get; set; }
+    public bool Enabled { get; set; } = true;
 }

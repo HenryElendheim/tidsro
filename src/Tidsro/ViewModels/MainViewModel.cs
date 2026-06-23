@@ -265,6 +265,18 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void ToggleAlarm(AlarmItemViewModel? row)
+    {
+        if (row is null) return;
+        CommitPendingDelete();                          // settle any outstanding undo first
+        var item = row.Item;
+        _scheduler.SetEnabled(item, !item.IsEnabled);   // re-enable rolls a stale recurring alarm forward
+        RebuildAgenda();
+        AlarmsChanged?.Invoke(this, EventArgs.Empty);   // the on/off change is persisted
+        Announce($"Alarm at {row.TimeText} turned {(item.IsEnabled ? "on" : "off")}");
+    }
+
+    [RelayCommand]
     private void UndoDelete()
     {
         if (_pendingDelete is not { } item) return;
@@ -278,14 +290,14 @@ public partial class MainViewModel : ObservableObject
         }
         else if (item.RecurringDays is { } days && item.EndsAt is { } next)
         {
-            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore);
+            _scheduler.ArmRecurringAlarm(next.Hour, next.Minute, days, item.Label, item.Sound, item.Id, next, item.WarnBefore, item.IsEnabled);
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
         }
         else if (item.EndsAt is { } fireAt)
         {
-            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore);   // re-arm; next tick re-checks grace if past
+            _scheduler.ArmClockAlarm(fireAt, item.Label, item.Sound, item.Id, item.WarnBefore, item.IsEnabled);   // re-arm; next tick re-checks grace if past
             RebuildAgenda();
             Announce("Alarm restored");
             // No persist needed: the record was never removed from disk.
@@ -339,18 +351,29 @@ public partial class MainViewModel : ObservableObject
     private void RebuildAgenda()
     {
         var today = _scheduler.Now.Date;
-        var ordered = _scheduler.Alarms
+
+        // Enabled alarms first, in fire-time order.
+        var enabled = _scheduler.Alarms
+            .Where(a => a.IsEnabled)
             .OrderBy(a => a.EndsAt)
             .ThenBy(a => a.Label)
-            .ThenBy(a => a.Id)
-            .ToList();
+            .ThenBy(a => a.Id);
+        // Disabled alarms park below, ordered by time-of-day — a disabled recurring alarm's date can
+        // be stale (frozen while off), so the full timestamp would mis-sort it.
+        var disabled = _scheduler.Alarms
+            .Where(a => !a.IsEnabled)
+            .OrderBy(a => a.EndsAt?.TimeOfDay)
+            .ThenBy(a => a.Label)
+            .ThenBy(a => a.Id);
+        var ordered = enabled.Concat(disabled).ToList();
 
         Alarms.Clear();
         for (var i = 0; i < ordered.Count; i++)
         {
             var a = ordered[i];
             var isTomorrow = a.EndsAt is { } e && e.Date != today;
-            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext: i == 0));
+            var isNext = i == 0 && a.IsEnabled;   // a disabled alarm is never "next"
+            Alarms.Add(new AlarmItemViewModel(a, isTomorrow, isNext));
         }
         OnPropertyChanged(nameof(IsDayEmpty));
         _agendaSignature = AgendaSignature();

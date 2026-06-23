@@ -444,4 +444,118 @@ public class SchedulerServiceTests
         s.Tick();
         Assert.Equal(2, warned);               // warned again for the next occurrence
     }
+
+    [Fact]
+    public void Armed_alarms_are_enabled_by_default()
+    {
+        var (s, c) = New();
+        var clock = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None);
+        var rec = s.ArmRecurringAlarm(7, 0, RecurrenceRules.AllDays, null, SoundChoice.None);
+        Assert.True(clock.IsEnabled);
+        Assert.True(rec.IsEnabled);
+    }
+
+    [Fact]
+    public void ArmClockAlarm_can_create_a_disabled_alarm()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None, enabled: false);
+        Assert.False(alarm.IsEnabled);
+    }
+
+    [Fact]
+    public void ArmRecurringAlarm_can_create_a_disabled_alarm()
+    {
+        var (s, _) = New();
+        var alarm = s.ArmRecurringAlarm(7, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        Assert.False(alarm.IsEnabled);
+    }
+
+    [Fact]
+    public void Tick_does_not_fire_a_disabled_clock_alarm_past_its_time()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(1), null, SoundChoice.None, enabled: false);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(2));   // well past its time
+        s.Tick();
+
+        Assert.Equal(0, fired);
+        Assert.Single(s.Alarms);              // stays armed-but-off, not removed
+    }
+
+    [Fact]
+    public void Tick_does_not_warn_for_a_disabled_alarm()
+    {
+        var (s, c) = New();
+        s.ArmClockAlarm(c.Now + TimeSpan.FromMinutes(10), null, SoundChoice.Bell, warnBefore: true, enabled: false);
+        var warned = 0; s.Warning += (_, _) => warned++;
+
+        c.Advance(TimeSpan.FromMinutes(6));   // inside [+5, +10)
+        s.Tick();
+
+        Assert.Equal(0, warned);
+    }
+
+    [Fact]
+    public void Tick_does_not_fire_or_advance_a_disabled_recurring_alarm()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        var frozen = alarm.EndsAt;
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromMinutes(61));   // past 10:00
+        s.Tick();
+
+        Assert.Equal(0, fired);
+        Assert.Equal(frozen, alarm.EndsAt);    // not advanced while off
+    }
+
+    [Fact]
+    public void SetEnabled_false_turns_an_alarm_off()
+    {
+        var (s, c) = New();
+        var alarm = s.ArmClockAlarm(c.Now + TimeSpan.FromHours(1), null, SoundChoice.None);
+        s.SetEnabled(alarm, false);
+        Assert.False(alarm.IsEnabled);
+    }
+
+    [Fact]
+    public void SetEnabled_true_rolls_a_past_recurring_alarm_forward_without_firing()
+    {
+        var (s, c) = New();   // Thu 2026-01-01 09:00
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        var fired = 0; s.Fired += (_, _) => fired++;
+
+        c.Advance(TimeSpan.FromDays(1));   // Fri 09:00 — its frozen Thu-10:00 occurrence is now in the past
+        s.SetEnabled(alarm, true);
+
+        Assert.True(alarm.IsEnabled);
+        Assert.Equal(0, fired);            // re-enabling never fires
+        Assert.Equal(new DateTimeOffset(2026, 1, 2, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // rolled to Fri 10:00
+
+        s.Tick();
+        Assert.Equal(0, fired);            // and the next tick doesn't retro-fire
+    }
+
+    [Fact]
+    public void SetEnabled_true_leaves_a_still_future_recurring_alarm_unchanged()
+    {
+        var (s, _) = New();   // Thu 09:00; EndsAt today 10:00 is still ahead
+        var alarm = s.ArmRecurringAlarm(10, 0, RecurrenceRules.AllDays, null, SoundChoice.None, enabled: false);
+        s.SetEnabled(alarm, true);
+        Assert.Equal(new DateTimeOffset(2026, 1, 1, 10, 0, 0, TimeSpan.Zero), alarm.EndsAt);   // unchanged
+    }
+
+    [Fact]
+    public void SetEnabled_true_does_not_roll_a_one_shot_forward()
+    {
+        var (s, c) = New();
+        var fireAt = c.Now + TimeSpan.FromHours(2);
+        var alarm = s.ArmClockAlarm(fireAt, null, SoundChoice.None, enabled: false);
+        s.SetEnabled(alarm, true);
+        Assert.Equal(fireAt, alarm.EndsAt);   // one-shots have no recurrence to roll
+    }
 }

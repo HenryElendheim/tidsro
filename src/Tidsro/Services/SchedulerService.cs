@@ -27,7 +27,7 @@ public sealed class SchedulerService
     public event EventHandler<TimerItem>? Warning;
 
     /// <summary>Arm a one-shot clock-time alarm. Pass <paramref name="id"/> to restore a persisted alarm's identity.</summary>
-    public TimerItem ArmClockAlarm(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid? id = null, bool warnBefore = false)
+    public TimerItem ArmClockAlarm(DateTimeOffset fireAt, string? label, SoundChoice sound, Guid? id = null, bool warnBefore = false, bool enabled = true)
     {
         var item = new TimerItem
         {
@@ -39,6 +39,7 @@ public sealed class SchedulerService
             State = TimerState.Running,
             WarnBefore = warnBefore,
             WarningSent = warnBefore && _clock.Now >= fireAt - WarningLead,   // armed inside the window -> no insta-warn
+            IsEnabled = enabled,
         };
         _alarms.Add(item);
         return item;
@@ -46,9 +47,27 @@ public sealed class SchedulerService
 
     public void RemoveAlarm(TimerItem item) => _alarms.Remove(item);
 
+    /// <summary>Turn an alarm on or off. Re-enabling a recurring alarm whose next occurrence has
+    /// already passed (e.g. switched off over the summer) rolls it forward to the next future one,
+    /// so it never fires the instant it comes back, and never emits a stale missed note.</summary>
+    public void SetEnabled(TimerItem alarm, bool enabled)
+    {
+        alarm.IsEnabled = enabled;
+        if (enabled
+            && alarm.TriggerType == TriggerType.Recurring
+            && alarm.RecurringDays is { } days
+            && alarm.EndsAt is { } end
+            && end <= _clock.Now)
+        {
+            var next = RecurrenceRules.NextOccurrence(_clock.Now, end.Hour, end.Minute, days);
+            alarm.EndsAt = next;
+            alarm.WarningSent = alarm.WarnBefore && _clock.Now >= next - WarningLead;
+        }
+    }
+
     /// <summary>Arm a recurring alarm. Pass <paramref name="nextFireAt"/> to restore a persisted alarm's next occurrence.</summary>
     public TimerItem ArmRecurringAlarm(int hour, int minute, Weekdays days, string? label, SoundChoice sound,
-        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false)
+        Guid? id = null, DateTimeOffset? nextFireAt = null, bool warnBefore = false, bool enabled = true)
     {
         var ends = nextFireAt ?? RecurrenceRules.NextOccurrence(_clock.Now, hour, minute, days);
         var item = new TimerItem
@@ -62,6 +81,7 @@ public sealed class SchedulerService
             State = TimerState.Running,
             WarnBefore = warnBefore,
             WarningSent = warnBefore && _clock.Now >= ends - WarningLead,
+            IsEnabled = enabled,
         };
         _alarms.Add(item);
         return item;
@@ -118,7 +138,7 @@ public sealed class SchedulerService
 
         foreach (var alarm in _alarms.ToList())
         {
-            if (alarm.State != TimerState.Running || alarm.EndsAt is not { } end) continue;
+            if (alarm.State != TimerState.Running || !alarm.IsEnabled || alarm.EndsAt is not { } end) continue;
 
             // Heads-up: raise Warning once when we cross into the last WarningLead before the alarm.
             if (alarm.WarnBefore && !alarm.WarningSent && now >= end - WarningLead && now < end)

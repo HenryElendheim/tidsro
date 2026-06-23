@@ -21,4 +21,7 @@ public sealed class TimerItem
     // (managed inside SchedulerService; never persisted).
     public bool WarnBefore { get; set; }
     public bool WarningSent { get; set; }
+
+    // Per-alarm on/off. A disabled alarm stays armed and persisted but never fires or warns.
+    public bool IsEnabled { get; set; } = true;
 }
