@@ -2,6 +2,13 @@
 
 All notable changes to Tidsro are documented here. Dates are ISO 8601.
 
+## [Unreleased]
+
+### Added
+- Per-alarm on/off toggle in the Schedule. Switch an alarm off to keep it without it firing or
+  warning — useful for silencing recurring alarms over a break — and back on when you need it.
+  Disabled alarms are kept across restarts and parked, muted, at the bottom of the list.
+
 ## [1.3.2] — 2026-06-22
 
 ### Changed
