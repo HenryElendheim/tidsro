@@ -5,7 +5,7 @@ A calm, dark-mode-first desktop timer for Windows — countdown timers and clock
 > **Tidsro** is Norwegian: *tid* (time) + *ro* (calm / peace) — roughly *"calm time."* The name is the whole idea: a timer that's visible when you need it and invisible when you don't.
 
 <p align="center">
-  <img src="docs/screenshots/main-window.png" alt="Tidsro main window: two Quick timers counting down on the left, a Schedule of recurring weekday alarms on the right, in a dark theme with gold accents." width="720">
+  <img src="docs/screenshots/main-window.png" alt="Tidsro main window: two Quick timers counting down on the left, and a Schedule of weekday alarms on the right — each row has an on/off toggle, with one alarm switched off and dimmed at the bottom — in a dark theme with gold accents." width="720">
 </p>
 
 ## Who it's for
