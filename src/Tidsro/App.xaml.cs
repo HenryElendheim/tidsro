@@ -77,7 +77,7 @@ public partial class App : Application
     private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
         if (_log.Log(e.Exception, "DispatcherUnhandledException"))
-            _tray?.ShowNotification("Tidsro", "Tidsro hit a problem but is still running.");
+            _tray?.ShowNotification("Tidsro", "Tidsro hit a problem but is still running. See Tray ▸ Open log folder.");
         e.Handled = true;   // a single glitch must never silently kill an alarm app
     }
 
