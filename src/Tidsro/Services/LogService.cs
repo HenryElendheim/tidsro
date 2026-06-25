@@ -59,7 +59,11 @@ public sealed class LogService
 
     private void Write(string entry)
     {
-        Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
-        File.AppendAllText(_path, entry);
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
+            File.AppendAllText(_path, entry);
+        }
+        catch { /* logging must never throw — a logger that crashes while logging a crash is useless */ }
     }
 }

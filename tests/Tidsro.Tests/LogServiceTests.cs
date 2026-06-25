@@ -87,4 +87,16 @@ public class LogServiceTests : IDisposable
         Assert.True(svc.Log(new InvalidOperationException("boom"), "Other"));   // different source -> different signature
         Assert.Equal(2, CountEntries(File.ReadAllText(_path)));
     }
+
+    [Fact]
+    public void Log_does_not_throw_on_an_unwritable_path()
+    {
+        var fileInTheWay = Path.Combine(_dir, "blocker");
+        File.WriteAllText(fileInTheWay, "x");                       // a file where a directory is needed
+        var badPath = Path.Combine(fileInTheWay, "nested", "tidsro.log");
+
+        var thrown = Record.Exception(() => new LogService(badPath, _clock)
+            .Log(new InvalidOperationException("boom"), "Test"));
+        Assert.Null(thrown);
+    }
 }
