@@ -1,7 +1,9 @@
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using H.NotifyIcon;
@@ -21,6 +23,7 @@ public partial class App : Application
     private SchedulerService _scheduler = null!;
     private SoundService _sound = null!;
     private PersistenceService _persistence = null!;
+    private LogService _log = null!;
     private TidsroData _data = null!;
     private MainViewModel _mainVm = null!;
     private AppSettings _settings = null!;
@@ -35,16 +38,75 @@ public partial class App : Application
     protected override void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
+        InstallExceptionHandlers();   // build the log and the safety nets before anything else can throw
 
-        if (!TryClaimSingleInstance())   // a second launch surfaces the first window, then exits
-            return;
+        try
+        {
+            if (!TryClaimSingleInstance())   // a second launch surfaces the first window, then exits
+                return;
 
-        LoadStateAndServices();
-        WireSchedulerEvents();
-        StartTickLoop();
-        RegisterHotkey();
-        _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, Quit);
-        ShowWindowUnlessBootLaunch(e);
+            LoadStateAndServices();
+            WireSchedulerEvents();
+            StartTickLoop();
+            RegisterHotkey();
+            _tray = TrayBuilder.Create(ShowMainWindow, FocusLatestAlert, OpenLogFolder, Quit);
+            ShowWindowUnlessBootLaunch(e);
+        }
+        catch (Exception ex)
+        {
+            // A startup failure must explain itself, not vanish. There is no tray yet, so the
+            // last resort is a single message — not knowing is the worst outcome (spec).
+            _log.Log(ex, "OnStartup");
+            MessageBox.Show("Tidsro couldn't start. See tidsro.log.", "Tidsro",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            Shutdown();
+        }
+    }
+
+    // Build the crash log and install the app-wide safety nets. Done first in OnStartup so even a
+    // failure during the rest of startup is recorded. UI-thread errors are kept alive; background
+    // crashes are logged best-effort (the runtime is already tearing down when they surface).
+    private void InstallExceptionHandlers()
+    {
+        _log = new LogService(LogService.DefaultPath, new SystemClock());
+        DispatcherUnhandledException += OnDispatcherUnhandledException;
+        AppDomain.CurrentDomain.UnhandledException += OnDomainUnhandledException;
+        TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
+    }
+
+    private void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
+    {
+        if (_log.Log(e.Exception, "DispatcherUnhandledException"))
+            _tray?.ShowNotification("Tidsro", "Tidsro hit a problem but is still running.");
+        e.Handled = true;   // a single glitch must never silently kill an alarm app
+    }
+
+    private void OnDomainUnhandledException(object sender, UnhandledExceptionEventArgs e)
+    {
+        if (e.ExceptionObject is Exception ex)
+            _log.Log(ex, "AppDomain.UnhandledException");   // best-effort: the process is terminating
+    }
+
+    private void OnUnobservedTaskException(object? sender, UnobservedTaskExceptionEventArgs e)
+    {
+        _log.Log(e.Exception, "TaskScheduler.UnobservedTaskException");
+        e.SetObserved();
+    }
+
+    // Open the folder holding the crash log, selecting the file if it exists. Reachable from the tray
+    // so the log is discoverable after a balloon. Best-effort — opening a folder must never crash.
+    private void OpenLogFolder()
+    {
+        try
+        {
+            var dir = Path.GetDirectoryName(LogService.DefaultPath)!;
+            Directory.CreateDirectory(dir);
+            if (File.Exists(LogService.DefaultPath))
+                Process.Start("explorer.exe", $"/select,\"{LogService.DefaultPath}\"");
+            else
+                Process.Start("explorer.exe", dir);
+        }
+        catch { /* opening Explorer is a convenience, never critical */ }
     }
 
     // Claim the single-instance mutex. Returns false for a second launch — after signalling the first
