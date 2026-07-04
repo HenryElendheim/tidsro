@@ -12,7 +12,11 @@ A native Android port of Tidsro: the same countdown timers and Schedule of clock
 
 ## Getting the APK
 
-Every push that touches `android/` runs the **Android APK** GitHub Actions workflow, which uploads the built, signed `Tidsro.apk` as a workflow artifact. Open the run on the Actions tab, download the `Tidsro-apk` artifact, unzip it, and open the APK on your phone (you will need to allow installs from your browser or file manager the first time).
+Every push that touches `android/` runs the **Android APK** GitHub Actions workflow, which builds and signs `Tidsro.apk` and publishes it to the **android-latest** release:
+
+https://github.com/HenryElendheim/tidsro/releases/download/android-latest/Tidsro.apk
+
+Open that link on your phone, download, and open the file — allow installs from your browser or file manager the first time. The same APK is also attached to each workflow run as the `Tidsro-apk` artifact (zipped).
 
 ## Building locally
 
