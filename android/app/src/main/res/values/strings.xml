@@ -9,7 +9,7 @@
     <string name="preset_5">5 min</string>
     <string name="preset_30">30 min</string>
     <string name="preset_60">60 min</string>
-    <string name="hint_duration">25, 5:00, or 1:30:00</string>
+    <string name="hint_duration">01:10 = 1 min and 10 sec</string>
     <string name="hint_label">Label (optional)</string>
     <string name="start">Start</string>
     <string name="no_timers">No timers running.</string>
